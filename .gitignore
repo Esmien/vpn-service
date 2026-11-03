@@ -1,0 +1,9 @@
+# runtime-состояние и секреты (на сервере лежат в /root/vpn-router)
+config.json
+subs.json
+whitelist_links.json
+*.key
+*.pem
+*.enc
+*.log
+__pycache__/
