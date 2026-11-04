@@ -32,6 +32,21 @@ TEST = "🛠 Тест (Develop)"
 IP = "141.98.166.213"  # вход по IP: работает, даже если DNS домена лежит
 WHITE_GROUP = "🛡 Белые списки (LTE)"
 
+# --- RU-трафик (банки, госуслуги, VK/MAX, OZON, WB) идёт через московский узел пула ---
+# Домены, которые не попадают под .ru-суффикс, но живут только в РФ:
+RU_DOMAINS = ["vk.com", "vk.me", "vk-cdn.net", "userapi.com", "mycdn.me", "max.ru",
+              "ozon.com", "gosuslugi.ru", "sberbank.ru", "tbank.ru", "vtb.ru",
+              "alfabank.ru", "wildberries.ru", "wb.ru", "wbstatic.net"]
+
+
+def ru_node() -> str:
+    """Имя московского узла из пула («Москва - YouTube/ГосУслуги/Банки»)."""
+    relay, _ = load_nodes()
+    for n in relay:
+        if "Москва" in n["name"].replace("\u200b", ""):
+            return n["name"]
+    return EE
+
 
 def vless(uid: str, path: str, tag: str, addr: str = HOST) -> str:
     query = {"type": "ws", "security": "tls", "sni": HOST, "host": HOST, "path": path, "encryption": "none"}
@@ -179,6 +194,9 @@ def build(token_dir: Path, uid: str) -> None:
 
     ours_proxies = "".join(clash_proxy(uid, name, path, addr) for name, path, addr in ours)
     ours_names = "".join(f'      - {json.dumps(n, ensure_ascii=False)}\n' for n, _, _ in ours)
+    ru = ru_node()
+    ru_rules = "".join(f"  - DOMAIN-SUFFIX,{d},{ru}\n" for d in RU_DOMAINS)
+    ru_rules += f"  - DOMAIN-SUFFIX,ru,{ru}\n  - DOMAIN-SUFFIX,su,{ru}\n"
 
     (token_dir / "clash.yaml").write_text(f"""# Esmien VPN
 # Маршруты через наш сервер (белые списки — отдельная подписка)
@@ -213,6 +231,7 @@ rules:
   - DOMAIN-SUFFIX,googleusercontent.com,{FR}
   - DOMAIN-SUFFIX,withgoogle.com,{FR}
   - DOMAIN-SUFFIX,google.dev,{FR}
+{ru_rules}  - GEOIP,RU,{ru}
   - MATCH,{EE}
 """)
 
@@ -228,6 +247,8 @@ rules:
             "route": {"rules": [
                 {"domain_suffix": ["google.com", "googleapis.com", "gstatic.com",
                                    "googleusercontent.com", "withgoogle.com"], "outbound": FR},
+                {"domain_suffix": [".ru", ".su"] + RU_DOMAINS, "outbound": ru},
+                {"geoip": ["ru"], "outbound": ru},
                 {"outbound": EE}]}}
     (token_dir / "singbox.json").write_text(json.dumps(sing, indent=2, ensure_ascii=False))
     token_dir.chmod(0o755)
