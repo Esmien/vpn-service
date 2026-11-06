@@ -85,25 +85,26 @@ def render(port: int, host: str = HOST, cert: str = CERT) -> str:
 
 def write_title_map() -> None:
     """Profile title per subscription token: whitelist bundle is the LTE one."""
-    titles = {"default": "Esmien VPN"}
+    entries = {"default": ("Esmien VPN", "esmien-vpn")}
     for d in sorted(Path("/var/www/esmien-sub").iterdir()):
         if not d.is_dir() or d.name.startswith("."):
             continue
         kind_file = d / "kind"
         title_file = d / "title"
         kind = kind_file.read_text().strip() if kind_file.exists() else "sub"
+        lte = kind == "whitelist"
         if title_file.exists():
-            titles[d.name] = title_file.read_text().strip() or "Esmien VPN"
+            title = title_file.read_text().strip() or "Esmien VPN"
         else:
-            titles[d.name] = "Esmien VPN (LTE)" if kind == "whitelist" else "Esmien VPN"
+            title = "Esmien VPN (LTE)" if lte else "Esmien VPN"
+        entries[d.name] = (title, "esmien-vpn-lte" if lte else "esmien-vpn")
     body = "map $esmien_sub_token $esmien_sub_title {\n" + "".join(
-        f'    "{t}" "{n}";\n' for t, n in titles.items()) + "}\n"
+        f'    "{t}" "{v[0]}";\n' for t, v in entries.items()) + "}\n"
     body += "map $esmien_sub_token $esmien_sub_fname {\n"
-    body += "".join(f'    "{t}" "{"esmien-vpn-lte" if n.endswith("(LTE)") else "esmien-vpn"}";\n'
-                    for t, n in titles.items())
+    body += "".join(f'    "{t}" "{v[1]}";\n' for t, v in entries.items())
     body += "}\n"
     Path("/etc/nginx/conf.d/00-esmien-sub-title.conf").write_text(body)
-    print("written 00-esmien-sub-title.conf:", {k: v for k, v in titles.items() if k != "default"})
+    print("written 00-esmien-sub-title.conf:", {k: v[0] for k, v in entries.items() if k != "default"})
 
 
 def main() -> int:
