@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+# vpn-cfg — правка и применение конфига VPN-маршрутизатора (Xray, blue/green)
+#   vpn-cfg status            сводка: инбаунды, правила, цвета и контейнеры
+#   vpn-cfg show [jq-фильтр]  показать конфиг (секреты не маскируются — только для root)
+#   vpn-cfg edit              открыть config.json в редакторе (с бэкапом)
+#   vpn-cfg apply             проверить, поднять неактивный цвет, переключить nginx (без простоя)
+#   vpn-cfg switch [a|b]      переключить трафик на другой цвет без правок конфига
+#   vpn-cfg rollback          вернуть предыдущий бэкап и применить
+#   vpn-cfg backups           список бэкапов
+#
+# apply больше НЕ перезапускает контейнер, который несёт трафик: правки едут на
+# неактивный цвет, проверяются там, и только потом nginx переключается на него.
+set -euo pipefail
+
+CFG=/root/vpn-router/config.json
+BRAND=/root/vpn-router/brand.json
+BAK=/root/vpn-router/backups
+BG=/root/vpn-router/vpn-bluegreen.py
+
+mkdir -p "$BAK"
+
+status() {
+  python3 - "$CFG" "$BRAND" <<'PY'
+import json, sys
+cfg = json.load(open(sys.argv[1]))
+brand = json.load(open(sys.argv[2]))
+print(f"host:      {brand['host']}:{brand['port']} (резерв {brand['alt_port']})")
+print(f"inbounds:  {len(cfg['inbounds'])}")
+for i in cfg["inbounds"]:
+    path = i.get("streamSettings", {}).get("wsSettings", {}).get("path", "-")
+    print(f"  {i['tag']:<10} 127.0.0.1:{i['port']:<6} {path}")
+print(f"outbounds: {', '.join(o['tag'] for o in cfg['outbounds'])}")
+print(f"rules:     {len(cfg['routing']['rules'])}")
+print(f"default:   {cfg['routing']['rules'][-1].get('outboundTag')}")
+PY
+  python3 "$BG" status
+}
+
+apply() {
+  python3 -m json.tool "$CFG" >/dev/null || { echo "config.json: невалидный JSON — не применяю"; exit 1; }
+  cp -a "$CFG" "$BAK/config-$(date +%Y%m%d-%H%M%S).json"
+  python3 "$BG" apply
+}
+
+rollback() {
+  local last
+  last=$(ls -1t "$BAK"/config-*.json 2>/dev/null | head -1 || true)
+  [ -n "$last" ] || { echo "бэкапов нет"; exit 1; }
+  echo "откат на $last"
+  cp -a "$last" "$CFG"
+  python3 "$BG" apply
+}
+
+case "${1:-status}" in
+  status) status ;;
+  show) shift; python3 -m json.tool "$CFG" | { [ $# -gt 0 ] && jq "$@" || cat; } ;;
+  edit)
+    cp -a "$CFG" "$BAK/config-$(date +%Y%m%d-%H%M%S).json"
+    "${EDITOR:-nano}" "$CFG"
+    python3 -m json.tool "$CFG" >/dev/null && echo "JSON валиден — применить: vpn-cfg apply"
+    ;;
+  apply) apply ;;
+  switch) shift; python3 "$BG" flip "${1:-}" ;;
+  rollback) rollback ;;
+  backups) ls -1t "$BAK"/config-*.json 2>/dev/null | head -10 ;;
+  *) sed -n '2,12p' "$0"; exit 1 ;;
+esac

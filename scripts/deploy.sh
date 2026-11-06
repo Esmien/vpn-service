@@ -33,6 +33,7 @@ apt-get install -y -qq nginx libnginx-mod-stream certbot python3-certbot-nginx p
 log "каталоги и скрипты"
 mkdir -p "$ROUTER" "$WEB" /var/www/html
 install -m 755 "$ASSETS"/router/*.py "$ROUTER"/
+install -m 755 "$ASSETS"/scripts/vpn-cfg /usr/local/bin/vpn-cfg
 [ -f "$ROUTER/brand.json" ] || install -m 644 "$ASSETS"/router/brand.json "$ROUTER"/brand.json
 mkdir -p /root/mtproto-faketls
 [ -f "$UUID_FILE" ] || openssl rand -hex 16 > "$UUID_FILE"
@@ -88,13 +89,19 @@ log "nginx-входы"
 python3 "$ROUTER/apply_brand.py"
 nginx -t && systemctl reload nginx
 
-log "контейнер vpn-router"
-docker rm -f vpn-router >/dev/null 2>&1 || true
-docker run -d --name vpn-router --restart unless-stopped --network host \
+log "контейнеры vpn-router (цвет a) и vpn-router-b (цвет b)"
+docker rm -f vpn-router vpn-router-b >/dev/null 2>&1 || true
+docker run -d --name vpn-router --restart unless-stopped --network host --user 0:0 \
   -v "$ROUTER/config.json":/etc/xray/config.json:ro \
+  ghcr.io/xtls/xray-core:latest run -c /etc/xray/config.json >/dev/null
+[ -f "$ROUTER/vpn-color" ] || echo a > "$ROUTER/vpn-color"
+python3 "$ROUTER/vpn-bluegreen.py" build
+docker run -d --name vpn-router-b --restart unless-stopped --network host --user 0:0 \
+  -v "$ROUTER/config.b.json":/etc/xray/config.json:ro \
   ghcr.io/xtls/xray-core:latest run -c /etc/xray/config.json >/dev/null
 sleep 5
 docker ps --filter name=vpn-router --format '  {{.Names}}: {{.Status}}'
+python3 "$ROUTER/vpn-bluegreen.py" status
 
 log "подписка"
 python3 "$ROUTER/make_sub.py" --new || python3 "$ROUTER/make_sub.py"

@@ -16,7 +16,19 @@ CONF = json.loads((BASE / "brand.json").read_text())
 HOST = CONF["host"]
 CERT = CONF["cert_dir"]
 PORTS = (CONF["port"], CONF["alt_port"])
-UPSTREAMS = [(path, port) for path, port in CONF["upstreams"].items()]
+BG_COLOR = Path("/root/vpn-router/vpn-color")
+BG_OFFSET = 1000
+
+
+def _bg_offset() -> int:
+    """Active color decides which port block nginx proxies to (see vpn-bluegreen.py)."""
+    try:
+        return BG_OFFSET if BG_COLOR.read_text().strip() == "b" else 0
+    except FileNotFoundError:
+        return 0
+
+
+UPSTREAMS = [(path, port + _bg_offset()) for path, port in CONF["upstreams"].items()]
 
 TEMPLATE = """server {{
     listen {port} ssl;

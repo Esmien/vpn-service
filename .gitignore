@@ -8,3 +8,8 @@ whitelist_links.json
 *.log
 __pycache__/
 users.json
+config.b.json
+vpn-color
+.applied
+pages_index.json
+users.md
