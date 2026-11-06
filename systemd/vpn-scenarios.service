@@ -1,0 +1,10 @@
+[Unit]
+Description=Scenario route watchdog (probe provider nodes, prune dead)
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /root/vpn-router/scenario_fallback.py
+Nice=10
+TimeoutStartSec=600

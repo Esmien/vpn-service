@@ -1,0 +1,11 @@
+[Unit]
+Description=Run the scenario watchdog with jitter
+
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=60s
+RandomizedDelaySec=30
+AccuracySec=10s
+
+[Install]
+WantedBy=timers.target

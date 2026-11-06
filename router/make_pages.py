@@ -114,7 +114,7 @@ TEMPLATE = """<!doctype html>
   </div>
 
   <p class="hi">Привет, <span>{name}</span></p>
-  <p class="sub">Выбери профиль и нажми кнопку — приложение подхватит настройки само.</p>
+  <p class="sub">{intro}</p>
 
 {cards}
   <footer>
@@ -172,17 +172,40 @@ def sub_url(token: str) -> str:
     return f"https://{BRAND['host']}:{BRAND['port']}/sub/{token}"
 
 
-def render(name: str, user: dict) -> str:
+def kind_of(token: str) -> str:
+    f = Path(f"/var/www/esmien-sub/{token}/kind")
+    return f.read_text().strip() if f.exists() else ""
+
+
+INTRO_DEFAULT = "Выбери профиль и нажми кнопку — приложение подхватит настройки само."
+
+INTRO_META = (
+    "Один узел — все сценарии внутри, выбирать ничего не нужно.<br>"
+    "🤖 Gemini · 🇷🇺 российские сайты без выключения VPN · 📺 YouTube без рекламы · "
+    "💬 TG, WhatsApp, Instagram и прочее<br>"
+    "RU-сайты могут открываться чуть медленнее: запрос идёт через несколько серверов — это норма.<br>"
+    "Если сценарий отвалится, будет задержка 5–10 секунд: автоматика вернёт вас на Эстонию."
+)
+
+META_DESC = "Один узел. Gemini, RU-сайты, YouTube без рекламы и заблокированные сервисы — "
+META_DESC_TAIL = "сервер разводит их сам, переключать ничего не нужно."
+
+
+def render(name: str, user: dict, token: str | None = None) -> str:
+    token = token or user["token"]
+    meta = kind_of(token) == "meta"
+    main_desc = (META_DESC + META_DESC_TAIL) if meta else (
+        "Наши маршруты: Эстония, Франция, Финляндия и пул релеев. "
+        "RU-сервисы идут через Москву автоматически.")
     cards = [CARD.format(icon=ICON_MAIN, label="Основная", badge="main", tagcls="",
-                         desc="Наши маршруты: Эстония, Франция, Финляндия и пул релеев. "
-                              "RU-сервисы идут через Москву автоматически.",
-                         url=sub_url(user["token"]))]
+                         desc=main_desc, url=sub_url(user["token"]))]
     if user.get("token_lte"):
         cards.append(CARD.format(icon=ICON_LTE, label="LTE", badge="белые списки", tagcls="warm",
                                  desc="Прямые узлы провайдера: работают, когда провайдер режет всё, "
                                       "кроме российских адресов.",
                                  url=sub_url(user["token_lte"])))
-    return TEMPLATE.format(name=name, cards="\n".join(cards))
+    return TEMPLATE.format(name=name, cards="\n".join(cards),
+                           intro=INTRO_META if meta else INTRO_DEFAULT)
 
 
 def main() -> int:
@@ -190,12 +213,11 @@ def main() -> int:
     PAGES.chmod(0o755)
     n = 0
     for name, user in USERS.items():
-        html = render(name, user)
         for token in (user["token"], user.get("token_lte")):
             if not token:
                 continue
             p = PAGES / f"{token}.html"
-            p.write_text(html, encoding="utf-8")
+            p.write_text(render(name, user, token), encoding="utf-8")
             p.chmod(0o644)
             n += 1
     # какой токен кому принадлежит — только для root, в служебном файле

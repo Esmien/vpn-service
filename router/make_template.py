@@ -4,14 +4,14 @@
 Keeps the base routes (our own inbounds and the fr/fi/direct/blocked outbounds),
 drops every imported relay route (in-p*, p*), and masks credentials.
 
-Usage: make_template.py [/root/vpn-router/config.json] [/root/vps-infra/assets/vpn/router/config.template.json]
+Usage: make_template.py [/root/vpn-router/config.json] [/root/vpn-service/router/config.template.json]
 """
 import json
 import sys
 from pathlib import Path
 
 SRC = Path(sys.argv[1] if len(sys.argv) > 1 else "/root/vpn-router/config.json")
-DST = Path(sys.argv[2] if len(sys.argv) > 2 else "/root/vps-infra/assets/vpn/router/config.template.json")
+DST = Path(sys.argv[2] if len(sys.argv) > 2 else "/root/vpn-service/router/config.template.json")
 KEEP_IN = {"ws-in", "in-general", "in-france", "in-test", "in-fi"}
 KEEP_OUT = {"fr", "fi", "direct", "blocked"}
 
@@ -42,6 +42,23 @@ for r in cfg["routing"]["rules"]:
         continue
     rules.append(r)
 cfg["routing"]["rules"] = rules
+# Balancers/Observatory follow the same filter: a template must not point at a
+# provider relay that a fresh deploy does not have.
+kept_bal = []
+for b in cfg["routing"].get("balancers", []):
+    sel = [t for t in b["selector"] if t in KEEP_OUT]
+    if sel and any(t != "direct" for t in sel):
+        kept_bal.append(dict(b, selector=sel))
+cfg["routing"]["balancers"] = kept_bal
+if kept_bal:
+    if cfg.get("observatory"):
+        cfg["observatory"]["subjectSelector"] = [t for t in cfg["observatory"]["subjectSelector"]
+                                                 if t in KEEP_OUT]
+else:
+    cfg.pop("observatory", None)
+kept_tags = {b["tag"] for b in kept_bal}
+cfg["routing"]["rules"] = [r for r in cfg["routing"]["rules"]
+                           if not (r.get("balancerTag") and r["balancerTag"] not in kept_tags)]
 cfg["log"] = {"loglevel": "warning"}
 cfg = mask(cfg)
 DST.write_text(json.dumps(cfg, ensure_ascii=False, indent=1) + "\n")

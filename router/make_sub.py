@@ -33,6 +33,37 @@ TEST = "🛠 Тест (Develop)"
 IP = "141.98.166.213"  # вход по IP: работает, даже если DNS домена лежит
 WHITE_GROUP = "🛡 Белые списки (LTE)"
 
+# --- Подписка «одна модель»: всё, что видит пользователь — один узел ---
+# Сценарии (Google -> FR/FI, YouTube -> AL, RU -> Москва) живут на сервере,
+# в выдаче их нет: лишний узел в списке = чужой трафик через провайдерскую
+# подписку и риск бана, а не удобство.
+META_TAG = "🇪🇪 Эстония (все сервисы)"
+
+META_ANNOUNCE = """\
+🇪🇪 Esmien VPN — Эстония
+✨ Один узел, все сценарии внутри: Gemini · 🇷🇺 RU-сайты без выключения VPN · 📺 YouTube без рекламы · 💬 TG, WhatsApp, Instagram и прочее
+👀 Нет списка моделей — так задумано: маршруты решает сервер, выбирать нечего
+🐢 RU-сайты открываются чуть медленнее: запрос идёт через несколько серверов, это норма
+🛟 Сценарий отвалился? 5–10 секунд — и автоматика вернёт вас на Эстонию\
+"""
+
+META_FULL = """\
+🇪🇪 Esmien VPN — одна модель, все сценарии внутри
+
+Сервер «Эстония» покрывает всё:
+• 🤖 Gemini
+• 🇷🇺 Российские сайты — БЕЗ выключения VPN
+  (открытие может быть чуть медленнее: запрос идёт через несколько серверов, это нормально)
+• 📺 YouTube без рекламы
+• 💬 Заблокированные сервисы — TG, WhatsApp, Instagram и прочее
+
+👀 Не переживайте, что нет кучи моделей, как в других подписках.
+Они есть — просто логика спрятана в сценариях, выбирать ничего не нужно.
+
+🛟 Если какой-то сценарий отвалится, вы увидите задержку 5–10 секунд:
+автоматика переключит вас на Эстонию, и всё продолжит работать.\
+"""
+
 # --- RU-трафик (банки, госуслуги, VK/MAX, OZON, WB) идёт через московский узел пула ---
 # Домены, которые не попадают под .ru-суффикс, но живут только в РФ:
 RU_DOMAINS = ["vk.com", "vk.me", "vk-cdn.net", "userapi.com", "mycdn.me", "max.ru",
@@ -191,9 +222,64 @@ rules:
     token_dir.chmod(0o755)
 
 
+def build_meta(token_dir: Path, uid: str) -> None:
+    """One visible node. Every scenario is decided by the server, not by the client."""
+    path = _BRAND["paths"]["general"]
+    link = vless(uid, path, META_TAG)
+    (token_dir / "list.txt").write_text(base64.b64encode((link + "\n").encode()).decode() + "\n")
+    (token_dir / "announce").write_text(META_ANNOUNCE + "\n", encoding="utf-8")
+
+    header = "\n".join("# " + line for line in META_FULL.splitlines())
+    proxies = clash_proxy(uid, META_TAG, path)
+    (token_dir / "clash.yaml").write_text(f"""{header}
+mixed-port: 7890
+allow-lan: false
+mode: rule
+log-level: info
+ipv6: false
+
+dns:
+  enable: true
+  ipv6: false
+  enhanced-mode: fake-ip
+  fake-ip-range: 198.18.0.1/16
+  nameserver: [1.1.1.1, 8.8.8.8]
+
+proxies:
+{proxies}proxy-groups:
+  - name: "Esmien VPN"
+    type: select
+    proxies:
+      - {json.dumps(META_TAG, ensure_ascii=False)}
+rules:
+  - IP-CIDR,127.0.0.0/8,DIRECT,no-resolve
+  - IP-CIDR,10.0.0.0/8,DIRECT,no-resolve
+  - IP-CIDR,172.16.0.0/12,DIRECT,no-resolve
+  - IP-CIDR,192.168.0.0/16,DIRECT,no-resolve
+  - DOMAIN-SUFFIX,local,DIRECT
+  - MATCH,Esmien VPN
+""", encoding="utf-8")
+
+    out = {"type": "vless", "tag": META_TAG, "server": HOST, "server_port": PORT, "uuid": uid,
+           "transport": {"type": "ws", "path": path, "headers": {"Host": HOST}},
+           "tls": {"enabled": True, "server_name": HOST}}
+    sing = {"log": {"level": "warn"},
+            "inbounds": [{"type": "mixed", "tag": "mixed-in", "listen": "127.0.0.1",
+                          "listen_port": 2080}],
+            "outbounds": [out, {"type": "direct", "tag": "direct"}],
+            "route": {"rules": [{"outbound": META_TAG}]}}
+    (token_dir / "singbox.json").write_text(json.dumps(sing, indent=2, ensure_ascii=False),
+                                            encoding="utf-8")
+    token_dir.chmod(0o755)
+
+
 def build(token_dir: Path, uid: str) -> None:
-    if (token_dir / "kind").exists() and (token_dir / "kind").read_text().strip() == "whitelist":
+    kind_file = token_dir / "kind"
+    kind = kind_file.read_text().strip() if kind_file.exists() else ""
+    if kind == "whitelist":
         return build_whitelist(token_dir, uid)
+    if kind == "meta":
+        return build_meta(token_dir, uid)
     relay, white = load_nodes()
     ours = [(EE, _BRAND["paths"]["general"], HOST), (FR, _BRAND["paths"]["france"], HOST),
             (FI, _BRAND["paths"]["fi"], HOST), (TEST, _BRAND["paths"]["test"], HOST)]

@@ -7,6 +7,7 @@ Switching the public host name (e.g. mon.esmien.qd.je -> ai.esmien.qd.je):
   3. nginx -t && systemctl reload nginx
 Client links change accordingly because the subscription files are regenerated.
 """
+import base64
 import json
 import subprocess
 from pathlib import Path
@@ -50,6 +51,7 @@ TEMPLATE = """server {{
         add_header Cache-Control "no-store";
         add_header profile-title $esmien_sub_title;
         add_header profile-update-interval 12;
+        add_header announce $esmien_sub_announce;
         add_header Content-Disposition "inline; filename=$esmien_sub_fname";
     }}
     location ~ ^/u/(?<esmien_page_token>[A-Za-z0-9_-]+)/?$ {{
@@ -125,8 +127,28 @@ def write_title_map() -> None:
     print("written 00-esmien-sub-title.conf:", {k: v[0] for k, v in entries.items() if k != "default"})
 
 
+def write_announce_map() -> None:
+    """Per-token `announce` header for clients that can show a subscription notice (Happ).
+
+    The value is base64 of the plain text in `<token>/announce`; an empty value makes nginx
+    drop the header entirely, so tokens without the file are unaffected.
+    """
+    entries = {"default": ""}
+    for d in sorted(Path("/var/www/esmien-sub").iterdir()):
+        if not d.is_dir() or d.name.startswith("."):
+            continue
+        src = d / "announce"
+        entries[d.name] = (base64.b64encode(src.read_text(encoding="utf-8").encode()).decode()
+                           if src.exists() else "")
+    body = "map $esmien_sub_token $esmien_sub_announce {\n" + "".join(
+        f'    "{t}" "{v}";\n' for t, v in entries.items()) + "}\n"
+    Path("/etc/nginx/conf.d/00-esmien-sub-announce.conf").write_text(body)
+    print("written 00-esmien-sub-announce.conf:", [t for t, v in entries.items() if v])
+
+
 def main() -> int:
     write_title_map()
+    write_announce_map()
     for port in PORTS:
         target = Path(f"/etc/nginx/conf.d/vpn-{port}.conf")
         target.write_text(render(port))
