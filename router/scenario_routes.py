@@ -18,7 +18,6 @@ BASE = Path("/root/vpn-router")
 CONFIG = BASE / "config.json"
 
 GOOGLE_GROUP = "bal-google"
-YT_GROUP = "bal-yt"
 RU_GROUP = "bal-ru"
 
 GROUPS = {
@@ -26,28 +25,36 @@ GROUPS = {
     # (both pass the Gemini geo verdict, but France is the one we sell).
     GOOGLE_GROUP: ["fr"],
     RU_GROUP: ["p15", "p16", "p17"],
-    YT_GROUP: ["p20"],
 }
 
 # Ordered preference used by the watchdog when it prunes/restores a group.
 PREFERENCE = {
     GOOGLE_GROUP: ["fr", "fi", "direct"],
     RU_GROUP: ["p15", "p16", "p17", "direct"],
-    YT_GROUP: ["p20", "direct"],
 }
 
-# Google and YouTube painlessly fall back to a single node; RU keeps the whole
-# pool in the balancer and lets leastPing pick the fastest alive relay.
-SINGLE = {GOOGLE_GROUP, YT_GROUP}
+# Google falls back to a single node; RU keeps the whole pool in the balancer and lets
+# leastPing pick the fastest alive relay. YouTube is deliberately absent: the owner
+# decided it stays on the Estonian exit rather than spending provider traffic.
+SINGLE = {GOOGLE_GROUP}
+
+# Manual, temporary overrides ({"bal-yt": ["p16", "direct"]}). Kept in a separate file so the
+# owner can re-point a scenario without touching code, and so the watchdog reads the same
+# preference instead of reverting it on its next pass.
+OVERRIDE_FILE = BASE / "scenario_override.json"
+if OVERRIDE_FILE.exists():
+    try:
+        for _g, _tags in json.loads(OVERRIDE_FILE.read_text()).items():
+            if _g in PREFERENCE and isinstance(_tags, list) and _tags:
+                PREFERENCE[_g] = _tags
+    except (ValueError, OSError):
+        pass
 
 GOOGLE_DOMAINS = ["domain:google.com", "domain:googleapis.com", "domain:gstatic.com",
                   "domain:googleusercontent.com", "domain:withgoogle.com", "domain:google.dev"]
-YOUTUBE_DOMAINS = ["domain:youtube.com", "domain:googlevideo.com", "domain:ytimg.com",
-                   "domain:youtu.be", "domain:youtube-nocookie.com", "domain:ggpht.com",
-                   "domain:yt.be"]
 
 OBSERVATORY = {
-    "subjectSelector": ["fr", "fi", "p15", "p16", "p17", "p20"],
+    "subjectSelector": ["fr", "fi", "p15", "p16", "p17"],
     "probeUrl": "https://www.gstatic.com/generate_204",
     "probeInterval": "30s",
     "enableConcurrency": True,
@@ -56,7 +63,7 @@ OBSERVATORY = {
 
 def balancers(selectors: dict) -> list:
     return [{"tag": tag, "selector": selectors[tag], "strategy": {"type": "leastPing"}}
-            for tag in (GOOGLE_GROUP, RU_GROUP, YT_GROUP)]
+            for tag in (GOOGLE_GROUP, RU_GROUP)]
 
 
 def install(cfg: dict) -> dict:
@@ -82,7 +89,6 @@ def install(cfg: dict) -> dict:
         {"type": "field", "ip": ["geoip:private"], "outboundTag": "blocked"},
         {"type": "field", "protocol": ["bittorrent"], "outboundTag": "blocked"},
         {"type": "field", "domain": GOOGLE_DOMAINS, "balancerTag": GOOGLE_GROUP},
-        {"type": "field", "domain": YOUTUBE_DOMAINS, "balancerTag": YT_GROUP},
         {"type": "field", "domain": ru_domains, "balancerTag": RU_GROUP},
     ]
     tail = []

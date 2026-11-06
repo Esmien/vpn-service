@@ -11,6 +11,7 @@ nodes looks exactly like the abuse their panels ban for.
     scenario_fallback.py            # one pass (timer runs this)
     scenario_fallback.py --dry-run  # log the verdict, change nothing
 """
+import fcntl
 import json
 import random
 import socket
@@ -99,6 +100,8 @@ def http_through(port: int, timeout: int = 8) -> bool:
 
 
 def main() -> int:
+    lock = open("/var/lock/vpn-config.lock", "w")
+    fcntl.flock(lock, fcntl.LOCK_EX)
     cfg = json.loads(CONFIG.read_text())
     groups = {b["tag"]: b for b in cfg["routing"]["balancers"]}
     targets = {}
@@ -162,12 +165,22 @@ def main() -> int:
         log(f"dry-run: изменил бы {changed}")
         return 0
 
+    fresh = json.loads(CONFIG.read_text())
+    fresh_groups = {b["tag"]: b for b in fresh["routing"].get("balancers", [])}
+    applied = {}
     for tag, sel in changed.items():
-        groups[tag]["selector"] = sel
-    CONFIG.write_text(json.dumps(cfg, indent=2, ensure_ascii=False) + "\n")
+        b = fresh_groups.get(tag)
+        if not b or b["selector"] == sel:
+            continue  # the group was removed or already fixed by someone else
+        b["selector"] = sel
+        applied[tag] = sel
+    if not applied:
+        log("после перечитки конфига применять нечего")
+        return 0
+    CONFIG.write_text(json.dumps(fresh, indent=2, ensure_ascii=False) + "\n")
     STATE.write_text(json.dumps({"selectors": wanted,
                                  "updated": datetime.now(timezone.utc).isoformat()}, indent=2))
-    log(f"применяю {changed}")
+    log(f"применяю {applied}")
     r = subprocess.run(["vpn-cfg", "apply"], capture_output=True, text=True, timeout=300)
     tail = (r.stdout or "").strip().splitlines()[-2:]
     log(f"apply rc={r.returncode}: {' / '.join(tail)}")

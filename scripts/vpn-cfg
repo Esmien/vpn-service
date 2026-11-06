@@ -39,7 +39,7 @@ PY
 apply() {
   python3 -m json.tool "$CFG" >/dev/null || { echo "config.json: невалидный JSON — не применяю"; exit 1; }
   cp -a "$CFG" "$BAK/config-$(date +%Y%m%d-%H%M%S).json"
-  python3 "$BG" apply
+  flock -w 300 /var/lock/vpn-config.lock python3 "$BG" apply
 }
 
 rollback() {
@@ -48,7 +48,7 @@ rollback() {
   [ -n "$last" ] || { echo "бэкапов нет"; exit 1; }
   echo "откат на $last"
   cp -a "$last" "$CFG"
-  python3 "$BG" apply
+  flock -w 300 /var/lock/vpn-config.lock python3 "$BG" apply
 }
 
 case "${1:-status}" in
