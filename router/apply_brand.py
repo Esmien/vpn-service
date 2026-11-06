@@ -40,6 +40,12 @@ TEMPLATE = """server {{
         add_header profile-update-interval 12;
         add_header Content-Disposition "inline; filename=$esmien_sub_fname";
     }}
+    location ~ ^/u/(?<esmien_page_token>[A-Za-z0-9_-]+)/?$ {{
+        root /var/www/esmien-pages;
+        try_files /$esmien_page_token.html =404;
+        default_type text/html;
+        add_header Cache-Control "no-store";
+    }}
 }}
 """
 
@@ -119,6 +125,7 @@ def main() -> int:
         compat_path.unlink()
         print(f"removed {compat_path}")
     subprocess.run(["python3", str(BASE / "make_sub.py")], check=False)
+    subprocess.run(["python3", str(BASE / "make_pages.py")], check=False)
     print("done: nginx -t && systemctl reload nginx")
     return 0
 

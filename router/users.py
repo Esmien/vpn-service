@@ -98,6 +98,8 @@ def write_title_map() -> None:
 def render_subs() -> None:
     subprocess.run(["python3", str(BASE / "make_sub.py")], check=True,
                    capture_output=True, text=True)
+    subprocess.run(["python3", str(BASE / "make_pages.py")], check=False,
+                   capture_output=True, text=True)
 
 
 def apply_live() -> None:
@@ -107,6 +109,11 @@ def apply_live() -> None:
 def url_of(token: str) -> str:
     brand = json.loads((BASE / "brand.json").read_text())
     return f"https://{brand['host']}:{brand['port']}/sub/{token}"
+
+
+def page_of(token: str) -> str:
+    brand = json.loads((BASE / "brand.json").read_text())
+    return f"https://{brand['host']}:{brand['port']}/u/{token}"
 
 
 def new_token() -> str:
@@ -165,6 +172,7 @@ def cmd_add(name: str, title: str | None, uid: str | None,
 
 
 def print_pair(name: str, u: dict) -> None:
+    print(f"  {name} — страница: {page_of(u['token'])}")
     print(f"  {name} — основная: {url_of(u['token'])}")
     if u.get("token_lte"):
         print(f"  {name} — LTE:      {url_of(u['token_lte'])}")
