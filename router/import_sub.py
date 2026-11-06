@@ -85,6 +85,14 @@ def main() -> int:
         brand["upstreams"][path] = port
         relay.append({"index": i, "name": name, "path": path})
 
+    try:  # per-user UUIDs must survive a pool rebuild
+        from users import apply_users, load as load_users
+        n = apply_users(cfg, load_users())
+        if n:
+            print(f"per-user clients re-applied: {n}")
+    except Exception as exc:  # noqa: BLE001
+        print(f"warn: per-user clients not re-applied: {exc}")
+
     CONFIG.write_text(json.dumps(cfg, ensure_ascii=False, indent=2) + "\n")
     BRAND.write_text(json.dumps(brand, ensure_ascii=False, indent=2) + "\n")
     RELAY.write_text(json.dumps(relay, ensure_ascii=False, indent=2) + "\n")

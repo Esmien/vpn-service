@@ -24,6 +24,7 @@ ROOT = Path("/var/www/esmien-sub")
 UID_FILE = Path("/root/mtproto-faketls/ws-client-uuid")
 RELAY_FILE = Path("/root/vpn-router/relay_nodes.json")
 WHITE_FILE = Path("/root/vpn-router/whitelist_links.json")
+USERS_FILE = Path("/root/vpn-router/users.json")
 
 EE = "🇪🇪 Эстония (General)"
 FR = "🇫🇷 Франция (Gemini)"
@@ -130,6 +131,18 @@ def load_nodes():
     relay = json.loads(RELAY_FILE.read_text()) if RELAY_FILE.exists() else []
     white = json.loads(WHITE_FILE.read_text()) if WHITE_FILE.exists() else []
     return relay, white
+
+
+def token_uid(token_dir: Path) -> str:
+    """UUID for this token dir: per-user key when the dir names its user, else the global one."""
+    uf = token_dir / "user"
+    if uf.exists():
+        name = uf.read_text().strip()
+        users = json.loads(USERS_FILE.read_text()) if USERS_FILE.exists() else {}
+        if name in users:
+            return users[name]["uuid"]
+        print(f"warn: {token_dir.name}: пользователь «{name}» не найден в users.json — глобальный uid")
+    return UID_FILE.read_text().strip()
 
 
 def build_whitelist(token_dir: Path, uid: str) -> None:
@@ -274,8 +287,8 @@ def main() -> int:
         build(target, uid)
         print(f"https://{HOST}:{PORT}/sub/{token}")
         return 0
-    for target in sorted(p for p in ROOT.iterdir() if p.is_dir()):
-        build(target, uid)
+    for target in sorted(p for p in ROOT.iterdir() if p.is_dir() and not p.name.startswith(".")):
+        build(target, token_uid(target))
         print(f"https://{HOST}:{PORT}/sub/{target.name}")
     return 0
 

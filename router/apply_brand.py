@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Rebuild nginx entry configs + VPN subscriptions from /root/vpn-router/brand.json.
 
-Switching the public host name (e.g. vpn.esmien.qd.je -> vpn.esmien.ru):
+Switching the public host name (e.g. mon.esmien.qd.je -> ai.esmien.qd.je):
   1. edit "host" and "cert_dir" in brand.json
   2. python3 /root/vpn-router/apply_brand.py
   3. nginx -t && systemctl reload nginx
@@ -87,11 +87,15 @@ def write_title_map() -> None:
     """Profile title per subscription token: whitelist bundle is the LTE one."""
     titles = {"default": "Esmien VPN"}
     for d in sorted(Path("/var/www/esmien-sub").iterdir()):
-        if not d.is_dir():
+        if not d.is_dir() or d.name.startswith("."):
             continue
         kind_file = d / "kind"
+        title_file = d / "title"
         kind = kind_file.read_text().strip() if kind_file.exists() else "sub"
-        titles[d.name] = "Esmien VPN (LTE)" if kind == "whitelist" else "Esmien VPN"
+        if title_file.exists():
+            titles[d.name] = title_file.read_text().strip() or "Esmien VPN"
+        else:
+            titles[d.name] = "Esmien VPN (LTE)" if kind == "whitelist" else "Esmien VPN"
     body = "map $esmien_sub_token $esmien_sub_title {\n" + "".join(
         f'    "{t}" "{n}";\n' for t, n in titles.items()) + "}\n"
     body += "map $esmien_sub_token $esmien_sub_fname {\n"

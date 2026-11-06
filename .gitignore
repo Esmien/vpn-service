@@ -7,3 +7,4 @@ whitelist_links.json
 *.enc
 *.log
 __pycache__/
+users.json
