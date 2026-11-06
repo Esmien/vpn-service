@@ -63,6 +63,11 @@ TEMPLATE = """<!doctype html>
   .hi{{font-size:26px; font-weight:700; letter-spacing:-.4px; margin:0 0 6px}}
   .hi span{{background:linear-gradient(90deg,#d3c6ff,#a8ecff); -webkit-background-clip:text; background-clip:text; color:transparent}}
   .sub{{margin:0 0 22px; color:var(--muted); font-size:14px}}
+  .sub p{{margin:0 0 11px}}
+  .sub ul{{margin:10px 0 12px; padding-left:20px}}
+  .sub li{{margin:0 0 7px}}
+  .sub b{{color:var(--text); font-weight:600}}
+  .sub .hint{{opacity:.85; font-size:13px}}
   .card{{
     background:var(--card); border:1px solid var(--line); border-radius:20px; padding:16px;
     margin-bottom:14px; backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
@@ -114,7 +119,7 @@ TEMPLATE = """<!doctype html>
   </div>
 
   <p class="hi">Привет, <span>{name}</span></p>
-  <p class="sub">{intro}</p>
+  <div class="sub">{intro}</div>
 
 {cards}
   <footer>
@@ -180,11 +185,17 @@ def kind_of(token: str) -> str:
 INTRO_DEFAULT = "Выбери профиль и нажми кнопку — приложение подхватит настройки само."
 
 INTRO_META = (
-    "Один узел — все сценарии внутри, выбирать ничего не нужно.<br>"
-    "🤖 Gemini · 🇷🇺 российские сайты без выключения VPN · 📺 YouTube без рекламы · "
-    "💬 TG, WhatsApp, Instagram и прочее<br>"
-    "RU-сайты могут открываться чуть медленнее: запрос идёт через несколько серверов — это норма.<br>"
-    "Если сценарий отвалится, будет задержка 5–10 секунд: автоматика вернёт вас на Эстонию."
+    "<p>Один узел — все сценарии внутри. Выбирать ничего не нужно:</p>"
+    "<ul>"
+    "<li>🤖 <b>Gemini</b> — работает как обычно</li>"
+    "<li>🇷🇺 <b>Российские сайты</b> — без выключения VPN</li>"
+    "<li>📺 <b>YouTube</b> — без рекламы</li>"
+    "<li>💬 <b>TG, WhatsApp, Instagram</b> и прочее</li>"
+    "</ul>"
+    "<p>Нет списка моделей? Так задумано: маршруты решает сервер.</p>"
+    "<p class=\"hint\">RU-сайты открываются чуть медленнее — запрос идёт через несколько "
+    "серверов, это норма.</p>"
+    "<p class=\"hint\">Если сценарий отвалится, переключение на Эстонию займёт до минуты.</p>"
 )
 
 META_DESC = "Один узел. Gemini, RU-сайты, YouTube без рекламы и заблокированные сервисы — "

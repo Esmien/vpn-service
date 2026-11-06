@@ -130,16 +130,16 @@ def write_title_map() -> None:
 def write_announce_map() -> None:
     """Per-token `announce` header for clients that can show a subscription notice (Happ).
 
-    The value is base64 of the plain text in `<token>/announce`; an empty value makes nginx
-    drop the header entirely, so tokens without the file are unaffected.
+    The value is the plain UTF-8 text of `<token>/announce`, flattened to one line: Happ renders
+    a base64 value literally, and a header cannot carry CR/LF. Empty value → nginx drops the
+    header, so tokens without the file are unaffected.
     """
     entries = {"default": ""}
     for d in sorted(Path("/var/www/esmien-sub").iterdir()):
         if not d.is_dir() or d.name.startswith("."):
             continue
         src = d / "announce"
-        entries[d.name] = (base64.b64encode(src.read_text(encoding="utf-8").encode()).decode()
-                           if src.exists() else "")
+        entries[d.name] = " ".join(src.read_text(encoding="utf-8").split()) if src.exists() else ""
     body = "map $esmien_sub_token $esmien_sub_announce {\n" + "".join(
         f'    "{t}" "{v}";\n' for t, v in entries.items()) + "}\n"
     Path("/etc/nginx/conf.d/00-esmien-sub-announce.conf").write_text(body)
@@ -147,6 +147,10 @@ def write_announce_map() -> None:
 
 
 def main() -> int:
+    # Subscriptions are rendered first: the title/announce maps below are built from the
+    # token dirs these renders leave behind, and building them from a stale dir ships the
+    # previous text (and the previous filename) to every client.
+    subprocess.run(["python3", str(BASE / "make_sub.py")], check=False)
     write_title_map()
     write_announce_map()
     for port in PORTS:
@@ -158,7 +162,6 @@ def main() -> int:
     if compat_path.exists():
         compat_path.unlink()
         print(f"removed {compat_path}")
-    subprocess.run(["python3", str(BASE / "make_sub.py")], check=False)
     subprocess.run(["python3", str(BASE / "make_pages.py")], check=False)
     print("done: nginx -t && systemctl reload nginx")
     return 0
