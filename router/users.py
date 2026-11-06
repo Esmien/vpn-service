@@ -131,7 +131,8 @@ def make_dir(token: str, name: str, title: str, kind: str | None = None) -> Path
 
 
 def lte_title(title: str) -> str:
-    return f"{title[:-1]}, LTE)" if title.endswith(")") else f"{title} LTE"
+    """«Esmien VPN (Наташа)» → «Esmien VPN LTE (Наташа)»: LTE впереди, чтобы имя было видно в списке профилей."""
+    return title.replace(" (", " LTE (", 1) if " (" in title else f"{title} LTE"
 
 
 def cmd_add(name: str, title: str | None, uid: str | None,
@@ -212,6 +213,22 @@ def cmd_rm(name: str) -> int:
     return 0
 
 
+def cmd_retitle() -> int:
+    """Rewrite the LTE profile titles of existing users to the current scheme."""
+    users = load()
+    n = 0
+    for name, u in users.items():
+        token = u.get("token_lte")
+        if not token or not (SUB_ROOT / token).exists():
+            continue
+        (SUB_ROOT / token / "title").write_text(lte_title(u["title"]) + "\n")
+        n += 1
+    write_title_map()
+    subprocess.run(["systemctl", "reload", "nginx"], check=False)
+    print(f"retitle: обновлено {n} LTE-подписок")
+    return 0
+
+
 def cmd_sync() -> int:
     users = load()
     cfg = json.loads(CONFIG.read_text())
@@ -257,6 +274,8 @@ def main() -> int:
         return 0
     if cmd == "sync":
         return cmd_sync()
+    if cmd == "retitle":
+        return cmd_retitle()
     print(__doc__)
     return 1
 
