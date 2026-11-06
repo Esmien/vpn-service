@@ -227,7 +227,10 @@ def build_meta(token_dir: Path, uid: str) -> None:
     (token_dir / "list.txt").write_text(base64.b64encode((link + "\n").encode()).decode() + "\n")
     (token_dir / "announce").write_text(META_ANNOUNCE + "\n", encoding="utf-8")
 
-    header = "\n".join("# " + line for line in META_FULL.splitlines())
+    # FlClash renders the YAML comments as the profile description and mangles non-ASCII
+    # there (UTF-8 shown as mojibake), so the file carries one ASCII marker only. The
+    # human-readable copy lives in the `announce` header and on /u/<token>.
+    header = "# Esmien VPN"
     proxies = clash_proxy(uid, META_TAG, path)
     (token_dir / "clash.yaml").write_text(f"""{header}
 mixed-port: 7890
