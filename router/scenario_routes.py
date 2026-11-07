@@ -24,13 +24,13 @@ GROUPS = {
     # Google: France is primary, Finland only takes over when France is dead
     # (both pass the Gemini geo verdict, but France is the one we sell).
     GOOGLE_GROUP: ["fr"],
-    RU_GROUP: ["p15", "p16", "p17"],
+    RU_GROUP: ["ru1"],
 }
 
 # Ordered preference used by the watchdog when it prunes/restores a group.
 PREFERENCE = {
     GOOGLE_GROUP: ["fr", "fi", "direct"],
-    RU_GROUP: ["p15", "p16", "p17", "direct"],
+    RU_GROUP: ["ru1", "direct"],
 }
 
 # Google falls back to a single node; RU keeps the whole pool in the balancer and lets
@@ -53,9 +53,11 @@ if OVERRIDE_FILE.exists():
 GOOGLE_DOMAINS = ["domain:google.com", "domain:googleapis.com", "domain:gstatic.com",
                   "domain:googleusercontent.com", "domain:withgoogle.com", "domain:google.dev"]
 
+# Probe URL must answer from every exit we own: gstatic times out from the RU box,
+# which used to make leastPing treat the RU group as empty and stall .ru traffic.
 OBSERVATORY = {
-    "subjectSelector": ["fr", "fi", "p15", "p16", "p17"],
-    "probeUrl": "https://www.gstatic.com/generate_204",
+    "subjectSelector": ["fr", "fi", "p15", "p16", "p17", "ru1"],
+    "probeUrl": "https://cp.cloudflare.com/generate_204",
     "probeInterval": "30s",
     "enableConcurrency": True,
 }
@@ -98,7 +100,9 @@ def install(cfg: dict) -> dict:
 
     routing["rules"] = head + inbound_rules + tail
     routing["balancers"] = balancers(GROUPS)
-    cfg["observatory"] = OBSERVATORY
+    obs = dict(OBSERVATORY)
+    obs["subjectSelector"] = sorted({t for tags in PREFERENCE.values() for t in tags if t != "direct"})
+    cfg["observatory"] = obs
     return cfg
 
 

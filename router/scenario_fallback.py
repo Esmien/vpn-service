@@ -30,6 +30,9 @@ STATE = BASE / "scenario_state.json"
 LOG = Path("/var/log/scenario-fallback.log")
 XRAY = "/usr/local/bin/xray"
 PROBE_BASE_PORT = 10920
+PROBE_URLS_RU = ["https://ya.ru/",
+                 "https://mail.ru/",
+                 "http://connectivitycheck.gstatic.com/generate_204"]
 PROBE_URLS = ["https://www.gstatic.com/generate_204",
               "https://cp.cloudflare.com/generate_204",
               "http://connectivitycheck.gstatic.com/generate_204"]
@@ -87,14 +90,14 @@ def probe_client(cfg: dict, targets: list, ports: dict) -> Path:
     return path
 
 
-def http_through(port: int, timeout: int = 8) -> bool:
-    url = random.choice(PROBE_URLS)
+def http_through(port: int, timeout: int = 8, ru: bool = False) -> bool:
+    url = random.choice(PROBE_URLS_RU if ru else PROBE_URLS)
     try:
         r = subprocess.run(["curl", "-s", "-o", "/dev/null", "-w", "%{http_code}",
                             "--max-time", str(timeout), "-A", random.choice(UAS),
                             "--proxy", f"socks5h://127.0.0.1:{port}", url],
                            capture_output=True, text=True, timeout=timeout + 4)
-        return r.stdout.strip() in ("200", "204")
+        return r.stdout.strip()[:1] in ("2", "3")
     except subprocess.TimeoutExpired:
         return False
 
@@ -132,7 +135,7 @@ def main() -> int:
         for tag in order:
             addr, port = targets[tag]
             ping = tcp_ping(addr, port)
-            ok = ping is not None and http_through(ports[tag])
+            ok = ping is not None and http_through(ports[tag], ru=(tag in PREFERENCE.get("bal-ru", [])))
             alive[tag] = ok
             report.append(f"{tag}:{'ok' if ok else 'DEAD'}({ping if ping is not None else '-'}ms)")
             time.sleep(random.uniform(0.3, 1.5))
