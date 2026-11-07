@@ -100,12 +100,12 @@ def lint(cfg: dict) -> list[str]:
         ports.add(port)
         if ib.get("listen") not in ("127.0.0.1", "::1"):
             errs.append(f"{ib.get('tag')}: listen={ib.get('listen')} — инбаунд опубликован в интернет")
-        if not (ib.get("settings", {}).get("clients") or []):
+        if ib.get("protocol") != "dokodemo-door" and not (ib.get("settings", {}).get("clients") or []):
             errs.append(f"{ib.get('tag')}: нет ни одного клиента")
     bal_tags = [b.get("tag") for b in (cfg.get("routing", {}).get("balancers") or [])]
     for n, rule in enumerate(cfg.get("routing", {}).get("rules", []), 1):
         ot = rule.get("outboundTag")
-        if ot and ot not in out_tags:
+        if ot and ot not in out_tags and ot != (cfg.get("api") or {}).get("tag"):
             errs.append(f"правило #{n}: outboundTag «{ot}» не существует")
         bt = rule.get("balancerTag")
         if bt and bt not in bal_tags:
@@ -150,6 +150,8 @@ def probe_direct(color: str, timeout: float = 1.5) -> tuple[int, int]:
     cfg = load(color)
     good = total = 0
     for ib in cfg.get("inbounds", []):
+        if ib.get("protocol") == "dokodemo-door":
+            continue  # api-инбаунд не говорит по HTTP: пробовать его бессмысленно
         total += 1
         url = f"http://127.0.0.1:{ib['port']}{path_of(ib)}"
         r = subprocess.run(["curl", "-sS", "-m", str(timeout), "-o", "/dev/null",

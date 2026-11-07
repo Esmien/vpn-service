@@ -33,6 +33,10 @@
      {
       "id": "<VLESS_UUID>",
       "email": "ws-in:Игорь"
+     },
+     {
+      "id": "<VLESS_UUID>",
+      "email": "ws-in:Даша"
      }
     ],
     "decryption": "none"
@@ -87,6 +91,10 @@
      {
       "id": "<VLESS_UUID>",
       "email": "in-general:Игорь"
+     },
+     {
+      "id": "<VLESS_UUID>",
+      "email": "in-general:Даша"
      }
     ],
     "decryption": "none"
@@ -141,6 +149,10 @@
      {
       "id": "<VLESS_UUID>",
       "email": "in-france:Игорь"
+     },
+     {
+      "id": "<VLESS_UUID>",
+      "email": "in-france:Даша"
      }
     ],
     "decryption": "none"
@@ -195,6 +207,10 @@
      {
       "id": "<VLESS_UUID>",
       "email": "in-test:Игорь"
+     },
+     {
+      "id": "<VLESS_UUID>",
+      "email": "in-test:Даша"
      }
     ],
     "decryption": "none"
@@ -249,6 +265,10 @@
      {
       "id": "<VLESS_UUID>",
       "email": "in-fi:Игорь"
+     },
+     {
+      "id": "<VLESS_UUID>",
+      "email": "in-fi:Даша"
      }
     ],
     "decryption": "none"
@@ -436,17 +456,40 @@
     ],
     "strategy": {
      "type": "leastPing"
-    }
+    },
+    "fallbackTag": "fi"
    }
   ]
  },
  "observatory": {
   "subjectSelector": [
-   "fr",
-   "fi"
+   "fi",
+   "fr"
   ],
-  "probeUrl": "https://www.gstatic.com/generate_204",
+  "probeUrl": "https://cp.cloudflare.com/generate_204",
   "probeInterval": "30s",
   "enableConcurrency": true
+ },
+ "stats": {},
+ "policy": {
+  "levels": {
+   "0": {
+    "statsUserUplink": true,
+    "statsUserDownlink": true
+   }
+  },
+  "system": {
+   "statsInboundUplink": true,
+   "statsInboundDownlink": true,
+   "statsOutboundUplink": true,
+   "statsOutboundDownlink": true
+  }
+ },
+ "api": {
+  "tag": "api",
+  "services": [
+   "StatsService",
+   "HandlerService"
+  ]
  }
 }
