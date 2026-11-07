@@ -21,7 +21,7 @@ OUT = Path("/var/www/vpn-stats/data.json")
 XRAY = "/usr/local/bin/xray"
 LEGACY_KEY = "@legacy"          # bare client (email == inbound tag) = main shared key
 LABELS = {                       # display names only; state keys stay stable
-    LEGACY_KEY: "Саша",
+    LEGACY_KEY: "общий ключ (без имени)",
     "Владислав": "Владислав (главный)",
 }
 WINDOW = 7 * 86400

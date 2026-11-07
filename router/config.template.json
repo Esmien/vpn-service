@@ -37,6 +37,10 @@
      {
       "id": "<VLESS_UUID>",
       "email": "ws-in:Даша"
+     },
+     {
+      "id": "<VLESS_UUID>",
+      "email": "ws-in:Владислав"
      }
     ],
     "decryption": "none"
@@ -70,10 +74,6 @@
     "clients": [
      {
       "id": "<VLESS_UUID>",
-      "email": "in-general"
-     },
-     {
-      "id": "<VLESS_UUID>",
       "email": "in-general:Наташа"
      },
      {
@@ -95,6 +95,10 @@
      {
       "id": "<VLESS_UUID>",
       "email": "in-general:Даша"
+     },
+     {
+      "id": "<VLESS_UUID>",
+      "email": "in-general:Владислав"
      }
     ],
     "decryption": "none"
@@ -128,10 +132,6 @@
     "clients": [
      {
       "id": "<VLESS_UUID>",
-      "email": "in-france"
-     },
-     {
-      "id": "<VLESS_UUID>",
       "email": "in-france:Наташа"
      },
      {
@@ -153,6 +153,10 @@
      {
       "id": "<VLESS_UUID>",
       "email": "in-france:Даша"
+     },
+     {
+      "id": "<VLESS_UUID>",
+      "email": "in-france:Владислав"
      }
     ],
     "decryption": "none"
@@ -186,10 +190,6 @@
     "clients": [
      {
       "id": "<VLESS_UUID>",
-      "email": "in-test"
-     },
-     {
-      "id": "<VLESS_UUID>",
       "email": "in-test:Наташа"
      },
      {
@@ -211,6 +211,10 @@
      {
       "id": "<VLESS_UUID>",
       "email": "in-test:Даша"
+     },
+     {
+      "id": "<VLESS_UUID>",
+      "email": "in-test:Владислав"
      }
     ],
     "decryption": "none"
@@ -244,10 +248,6 @@
     "clients": [
      {
       "id": "<VLESS_UUID>",
-      "email": "in-fi"
-     },
-     {
-      "id": "<VLESS_UUID>",
       "email": "in-fi:Наташа"
      },
      {
@@ -269,6 +269,10 @@
      {
       "id": "<VLESS_UUID>",
       "email": "in-fi:Даша"
+     },
+     {
+      "id": "<VLESS_UUID>",
+      "email": "in-fi:Владислав"
      }
     ],
     "decryption": "none"
