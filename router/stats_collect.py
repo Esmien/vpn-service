@@ -19,7 +19,11 @@ BASE = Path("/root/vpn-router")
 STATE = Path("/var/lib/vpn-stats/state.json")
 OUT = Path("/var/www/vpn-stats/data.json")
 XRAY = "/usr/local/bin/xray"
-LEGACY = "Главный ключ (мой + Саша)"
+LEGACY_KEY = "@legacy"          # bare client (email == inbound tag) = main shared key
+LABELS = {                       # display names only; state keys stay stable
+    LEGACY_KEY: "Саша",
+    "Владислав": "Владислав (главный)",
+}
 WINDOW = 7 * 86400
 ROUTE_LABELS = {
     "direct": "Эстония (direct)",
@@ -61,7 +65,7 @@ def parse(stats: list) -> tuple[dict, dict]:
         kind, who, _, direction = parts[0], parts[1], parts[2], parts[3]
         val = int(s.get("value") or 0)
         if kind == "user":
-            name = who.split(":", 1)[-1] if ":" in who else LEGACY
+            name = who.split(":", 1)[-1] if ":" in who else LEGACY_KEY
             users.setdefault(name, {"up": 0, "down": 0})["up" if direction == "uplink" else "down"] = val
         elif kind == "outbound":
             if who in SKIP_OUT:
@@ -155,7 +159,7 @@ def render(st: dict) -> dict:
         h24 = sum(d for ts, d in rec["samples"] if now - ts <= 86400)
         d7 = sum(d for ts, d in rec["samples"] if now - ts <= WINDOW)
         users.append({
-            "name": name,
+            "name": LABELS.get(name, name),
             "h24": mb(h24),
             "d7": mb(d7),
             "total": mb(rec["total"]),
