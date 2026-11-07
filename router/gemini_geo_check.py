@@ -17,8 +17,11 @@ import subprocess
 import sys
 
 BLOCKED = {"ru", "by", "ir", "kp", "sy", "cu", "cn", "mm", "sd", "tm", "ve", "af"}
+# Google returns a 2-letter code for most countries but a domain-style one for a few
+# ("co.uk" for a UK exit). A `[a-z]{2}` pattern silently fails on those and reports a
+# working exit as "check failed" — measured: EE -> ru, FR -> co.uk.
 MARKER = re.compile(
-    r'this\.gbar_=\{CONFIG:\[\[\[0,"www\.gstatic\.com","[^"]+","([a-z]{2})","([a-z]{2})"'
+    r'this\.gbar_=\{CONFIG:\[\[\[0,"www\.gstatic\.com","[^"]*","([a-z]{2,3}(?:\.[a-z]{2})?)","([a-z]{2})"'
 )
 
 

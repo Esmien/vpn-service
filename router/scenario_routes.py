@@ -27,6 +27,13 @@ GROUPS = {
     RU_GROUP: ["ru1"],
 }
 
+# Native xray failover. The balancer only holds one node per group, so when that node
+# stops answering the observatory there is nothing left to pick — `fallbackTag` is what
+# keeps the group alive, and xray does it himself in ~30–60 s (probeInterval), without
+# rewriting configs or restarting a container. This is the real fallback; the watchdog
+# only writes a draft and no longer applies anything.
+FALLBACK = {GOOGLE_GROUP: "fi", RU_GROUP: "direct"}
+
 # Ordered preference used by the watchdog when it prunes/restores a group.
 PREFERENCE = {
     GOOGLE_GROUP: ["fr", "fi", "direct"],
@@ -64,7 +71,8 @@ OBSERVATORY = {
 
 
 def balancers(selectors: dict) -> list:
-    return [{"tag": tag, "selector": selectors[tag], "strategy": {"type": "leastPing"}}
+    return [{"tag": tag, "selector": selectors[tag], "strategy": {"type": "leastPing"},
+             "fallbackTag": FALLBACK[tag]}
             for tag in (GOOGLE_GROUP, RU_GROUP)]
 
 
