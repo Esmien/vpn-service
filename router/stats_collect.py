@@ -19,7 +19,7 @@ BASE = Path("/root/vpn-router")
 STATE = Path("/var/lib/vpn-stats/state.json")
 OUT = Path("/var/www/vpn-stats/data.json")
 XRAY = "/usr/local/bin/xray"
-LEGACY = "legacy (общий ключ)"
+LEGACY = "Саша (главный ключ)"
 WINDOW = 7 * 86400
 ROUTE_LABELS = {
     "direct": "Эстония (direct)",
