@@ -1,0 +1,12 @@
+[Unit]
+Description=Subscription generator API for the stats dashboard
+After=network.target docker.service
+
+[Service]
+ExecStart=/usr/bin/python3 /root/vpn-router/subgen_api.py
+Restart=always
+RestartSec=3
+NoNewPrivileges=no
+
+[Install]
+WantedBy=multi-user.target
