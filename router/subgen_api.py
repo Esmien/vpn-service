@@ -55,7 +55,8 @@ class Handler(BaseHTTPRequestHandler):
         self._send(404, {"ok": False, "error": "not found"})
 
     def do_POST(self):
-        if self.path.rstrip("/") != "/new":
+        route = self.path.rstrip("/")
+        if route not in ("/new", "/del"):
             return self._send(404, {"ok": False, "error": "not found"})
         try:
             length = int(self.headers.get("Content-Length") or 0)
@@ -73,6 +74,21 @@ class Handler(BaseHTTPRequestHandler):
                 existing = load_users().get(name)
             except Exception as exc:
                 return self._send(500, {"ok": False, "error": str(exc)[:200]})
+
+            if route == "/del":
+                if not existing:
+                    return self._send(404, {"ok": False, "error": "такого пользователя нет"})
+                try:
+                    r = subprocess.run(["python3", f"{BASE}/users.py", "rm", name],
+                                       cwd=BASE, capture_output=True, text=True, timeout=600)
+                except subprocess.TimeoutExpired:
+                    return self._send(504, {"ok": False, "error": "apply не уложился в 10 минут"})
+                out = (r.stdout or "") + (r.stderr or "")
+                if r.returncode != 0:
+                    return self._send(500, {"ok": False, "error": out.strip()[-400:] or "users.py вернул ошибку"})
+                return self._send(200, {"ok": True, "name": name,
+                                        "hint": "ключ удалён: токены отозваны, конфиг применён"})
+
             if existing:
                 return self._send(409, {"ok": False, "exists": True, "name": name,
                                         "links": links(existing),

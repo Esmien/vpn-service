@@ -159,6 +159,8 @@ def render(st: dict) -> dict:
         h24 = sum(d for ts, d in rec["samples"] if now - ts <= 86400)
         d7 = sum(d for ts, d in rec["samples"] if now - ts <= WINDOW)
         users.append({
+            "key": name,
+            "deletable": not name.startswith("@"),
             "name": LABELS.get(name, name),
             "h24": mb(h24),
             "d7": mb(d7),

@@ -49,6 +49,18 @@
             white-space: nowrap; flex: 1; }
   .copy { padding: 5px 9px; font-size: 12px; }
   .ok { color: #6ee7a8; font-size: 13px; margin: 10px 0 4px; }
+  td.act { text-align: right; white-space: nowrap; }
+  .del, .yes, .no {
+    padding: 4px 9px; font-size: 12px; border-radius: 7px; cursor: pointer;
+    border: 1px solid #2c3546; background: transparent; color: #77809a; font-family: inherit;
+  }
+  .del:hover { color: #ff9b9b; border-color: #4a2b2f; }
+  .yes { color: #ffb4b4; border-color: #4a2b2f; background: #2a1a1d; }
+  .cfm {
+    width: 96px; padding: 4px 8px; font-size: 12px; border-radius: 7px;
+    border: 1px solid #4a2b2f; background: #151922; color: #e6e8ee; font-family: inherit;
+  }
+  .err-inline { color: #ffb4b4; font-size: 12px; }
 </style>
 </head>
 <body>
@@ -67,7 +79,7 @@
   <h2>Люди</h2>
   <table>
     <thead>
-      <tr><th>Человек</th><th>24 ч</th><th>7 дней</th><th>Всего</th><th>Последнее</th></tr>
+      <tr><th>Человек</th><th>24 ч</th><th>7 дней</th><th>Всего</th><th>Последнее</th><th></th></tr>
     </thead>
     <tbody id="users"></tbody>
   </table>
@@ -111,10 +123,12 @@ fetch("data.json", { cache: "no-store" }).then(r => r.json()).then(d => {
     const cls = u.total > 0 ? (u.h24 > 0 ? "live" : "idle") : "zero";
     const mark = u.total > 0 ? (u.h24 > 0 ? "" : " ·") : "";
     return "<tr><td>" + u.name + "</td><td>" + fmt(u.h24) + "</td><td>" + fmt(u.d7) +
-      '</td><td class="' + cls + '">' + fmt(u.total) + mark + "</td><td>" + ago(u.last) + "</td></tr>";
+      '</td><td class="' + cls + '">' + fmt(u.total) + mark + "</td><td>" + ago(u.last) +
+      '</td><td class="act">' + (u.deletable
+        ? '<button class="del" data-name="' + u.key + '">удалить</button>' : "") + '</td></tr>';
   });
   document.getElementById("users").innerHTML = rows.join("") ||
-    '<tr><td colspan="5" class="zero">данных пока нет</td></tr>';
+    '<tr><td colspan="6" class="zero">данных пока нет</td></tr>';
 
   document.getElementById("routes").innerHTML = d.routes.map(r =>
     "<tr><td>" + r.label + "</td><td>" + fmt(r.total) + "</td></tr>").join("") ||
@@ -150,6 +164,50 @@ const showLinks = (name, links, note) => {
     linkRow("страница", links.page) + linkRow("основная", links.sub) +
     (links.lte ? linkRow("LTE", links.lte) : "");
 };
+
+const usersBody = document.getElementById("users");
+
+usersBody.addEventListener("click", (e) => {
+  const cell = e.target.closest("td.act");
+  if (!cell) return;
+  const del = e.target.closest(".del");
+  const yes = e.target.closest(".yes");
+  const no = e.target.closest(".no");
+
+  if (del) {
+    const who = del.dataset.name;
+    cell.dataset.name = who;
+    cell.innerHTML = '<input class="cfm" placeholder="' + who + '" autocomplete="off">' +
+      '<button class="yes">удалить</button><button class="no">×</button>';
+    cell.querySelector("input").focus();
+    return;
+  }
+  if (no) {
+    cell.innerHTML = '<button class="del" data-name="' + cell.dataset.name + '">удалить</button>';
+    return;
+  }
+  if (!yes) return;
+
+  const who = cell.dataset.name;
+  const typed = cell.querySelector("input").value.trim();
+  if (typed !== who) {
+    const inp = cell.querySelector("input");
+    inp.value = "";
+    inp.placeholder = "введи: " + who;
+    return;
+  }
+  cell.innerHTML = '<span class="meta">удаляю…</span>';
+  fetch("api/del", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name: who })
+  }).then(r => r.json()).then(d => {
+    if (d.ok) { location.reload(); }
+    else { cell.innerHTML = '<span class="err-inline">' + (d.error || "ошибка") + "</span>"; }
+  }).catch(() => {
+    cell.innerHTML = '<span class="err-inline">сеть недоступна</span>';
+  });
+});
 
 btn.addEventListener("click", async () => {
   const name = document.getElementById("name").value.trim();
