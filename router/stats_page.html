@@ -61,6 +61,12 @@
     border: 1px solid #4a2b2f; background: #151922; color: #e6e8ee; font-family: inherit;
   }
   .err-inline { color: #ffb4b4; font-size: 12px; }
+  .ok-inline { color: #6ee7a8; font-size: 12px; }
+  .re {
+    padding: 4px 9px; font-size: 12px; border-radius: 7px; cursor: pointer;
+    border: 1px solid #2c3546; background: transparent; color: #8fb7ff; font-family: inherit;
+  }
+  .re:hover { border-color: #33456b; background: #1a2233; }
 </style>
 </head>
 <body>
@@ -111,6 +117,15 @@ const ago = (ts) => {
 const dt = (ts) => ts ? new Date(ts * 1000).toLocaleString("ru-RU",
   { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "—";
 
+const PROTECTED = new Set(["Владислав"]);
+const actCell = (u) => {
+  if (!u.deletable) return "";
+  if (PROTECTED.has(u.key)) {
+    return '<button class="re" data-name="' + u.key + '">перевыпустить</button>';
+  }
+  return '<button class="del" data-name="' + u.key + '">удалить</button>';
+};
+
 fetch("data.json", { cache: "no-store" }).then(r => r.json()).then(d => {
   document.getElementById("meta").innerHTML =
     "обновлено <b>" + dt(d.updated) + "</b> · сбор с <b>" + dt(d.since) +
@@ -124,8 +139,7 @@ fetch("data.json", { cache: "no-store" }).then(r => r.json()).then(d => {
     const mark = u.total > 0 ? (u.h24 > 0 ? "" : " ·") : "";
     return "<tr><td>" + u.name + "</td><td>" + fmt(u.h24) + "</td><td>" + fmt(u.d7) +
       '</td><td class="' + cls + '">' + fmt(u.total) + mark + "</td><td>" + ago(u.last) +
-      '</td><td class="act">' + (u.deletable
-        ? '<button class="del" data-name="' + u.key + '">удалить</button>' : "") + '</td></tr>';
+      '</td><td class="act">' + actCell(u) + '</td></tr>';
   });
   document.getElementById("users").innerHTML = rows.join("") ||
     '<tr><td colspan="6" class="zero">данных пока нет</td></tr>';
@@ -171,24 +185,32 @@ usersBody.addEventListener("click", (e) => {
   const cell = e.target.closest("td.act");
   if (!cell) return;
   const del = e.target.closest(".del");
+  const re = e.target.closest(".re");
   const yes = e.target.closest(".yes");
   const no = e.target.closest(".no");
 
-  if (del) {
-    const who = del.dataset.name;
+  if (del || re) {
+    const who = (del || re).dataset.name;
+    const mode = re ? "reissue" : "del";
     cell.dataset.name = who;
+    cell.dataset.mode = mode;
     cell.innerHTML = '<input class="cfm" placeholder="' + who + '" autocomplete="off">' +
-      '<button class="yes">удалить</button><button class="no">×</button>';
+      '<button class="yes">' + (mode === "reissue" ? "перевыпустить" : "удалить") + "</button>" +
+      '<button class="no">×</button>';
     cell.querySelector("input").focus();
     return;
   }
   if (no) {
-    cell.innerHTML = '<button class="del" data-name="' + cell.dataset.name + '">удалить</button>';
+    const back = cell.dataset.mode === "reissue"
+      ? '<button class="re" data-name="' + cell.dataset.name + '">перевыпустить</button>'
+      : '<button class="del" data-name="' + cell.dataset.name + '">удалить</button>';
+    cell.innerHTML = back;
     return;
   }
   if (!yes) return;
 
   const who = cell.dataset.name;
+  const mode = cell.dataset.mode === "reissue" ? "reissue" : "del";
   const typed = cell.querySelector("input").value.trim();
   if (typed !== who) {
     const inp = cell.querySelector("input");
@@ -196,14 +218,20 @@ usersBody.addEventListener("click", (e) => {
     inp.placeholder = "введи: " + who;
     return;
   }
-  cell.innerHTML = '<span class="meta">удаляю…</span>';
-  fetch("api/del", {
+  cell.innerHTML = '<span class="meta">' + (mode === "reissue" ? "перевыпускаю…" : "удаляю…") + "</span>";
+  fetch("api/" + mode, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ name: who })
   }).then(r => r.json()).then(d => {
-    if (d.ok) { location.reload(); }
-    else { cell.innerHTML = '<span class="err-inline">' + (d.error || "ошибка") + "</span>"; }
+    if (d.ok && mode === "reissue") {
+      showLinks(d.name, d.links, d.hint || "перевыпущено");
+      cell.innerHTML = '<span class="ok-inline">готово</span>';
+    } else if (d.ok) {
+      location.reload();
+    } else {
+      cell.innerHTML = '<span class="err-inline">' + (d.error || "ошибка") + "</span>";
+    }
   }).catch(() => {
     cell.innerHTML = '<span class="err-inline">сеть недоступна</span>';
   });

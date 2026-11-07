@@ -16,6 +16,7 @@ BASE = "/root/vpn-router"
 NAME_RE = re.compile(r"^[A-Za-zА-Яа-яЁё0-9 _-]{2,24}$")
 LOCK = threading.Lock()
 HOST, PORT = "127.0.0.1", 9198
+PROTECTED = {"Владислав"}  # owner: no delete, reissue only
 
 
 def load_users() -> dict:
@@ -56,7 +57,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         route = self.path.rstrip("/")
-        if route not in ("/new", "/del"):
+        if route not in ("/new", "/del", "/reissue"):
             return self._send(404, {"ok": False, "error": "not found"})
         try:
             length = int(self.headers.get("Content-Length") or 0)
@@ -76,6 +77,9 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(500, {"ok": False, "error": str(exc)[:200]})
 
             if route == "/del":
+                if name in PROTECTED:
+                    return self._send(403, {"ok": False,
+                                            "error": "этот ключ не удаляется — только перевыпуск"})
                 if not existing:
                     return self._send(404, {"ok": False, "error": "такого пользователя нет"})
                 try:
@@ -88,6 +92,22 @@ class Handler(BaseHTTPRequestHandler):
                     return self._send(500, {"ok": False, "error": out.strip()[-400:] or "users.py вернул ошибку"})
                 return self._send(200, {"ok": True, "name": name,
                                         "hint": "ключ удалён: токены отозваны, конфиг применён"})
+
+            if route == "/reissue":
+                if not existing:
+                    return self._send(404, {"ok": False, "error": "такого пользователя нет"})
+                for step in (["rm", name], ["add", name]):
+                    try:
+                        r = subprocess.run(["python3", f"{BASE}/users.py", *step],
+                                           cwd=BASE, capture_output=True, text=True, timeout=600)
+                    except subprocess.TimeoutExpired:
+                        return self._send(504, {"ok": False, "error": "apply не уложился в 10 минут"})
+                    if r.returncode != 0:
+                        out = ((r.stdout or "") + (r.stderr or "")).strip()[-400:]
+                        return self._send(500, {"ok": False, "error": out or "users.py вернул ошибку"})
+                fresh = load_users().get(name) or {}
+                return self._send(200, {"ok": True, "name": name, "links": links(fresh),
+                                        "hint": "ключ перевыпущен: старые ссылки мертвы, вот новые"})
 
             if existing:
                 return self._send(409, {"ok": False, "exists": True, "name": name,
