@@ -223,21 +223,30 @@ def main() -> int:
     PAGES.mkdir(parents=True, exist_ok=True)
     PAGES.chmod(0o755)
     n = 0
+    valid = set()
     for name, user in USERS.items():
         for token in (user["token"], user.get("token_lte")):
             if not token:
                 continue
+            valid.add(token)
             p = PAGES / f"{token}.html"
             p.write_text(render(name, user, token), encoding="utf-8")
             p.chmod(0o644)
             n += 1
+    # осиротевшие страницы (удалённый пользователь, перевыпущенный токен) — сносим,
+    # иначе /u/<старый токен> продолжает открываться и раздаёт мёртвые ссылки
+    dropped = 0
+    for f in PAGES.glob("*.html"):
+        if f.stem not in valid:
+            f.unlink()
+            dropped += 1
     # какой токен кому принадлежит — только для root, в служебном файле
     index = {tok: name for name, u in USERS.items()
              for tok in (u["token"], u.get("token_lte")) if tok}
     ip = BASE / "pages_index.json"
     ip.write_text(json.dumps(index, ensure_ascii=False, indent=2) + "\n")
     ip.chmod(0o600)
-    print(f"pages: {n} файлов в {PAGES}")
+    print(f"pages: {n} файлов в {PAGES}, убрано осиротевших: {dropped}")
     return 0
 
 

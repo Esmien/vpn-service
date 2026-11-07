@@ -197,4 +197,11 @@ def render(st: dict) -> dict:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    import fcntl
+    STATE.parent.mkdir(parents=True, exist_ok=True)
+    with open("/var/lib/vpn-stats/lock", "w") as lock:
+        try:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            raise SystemExit(0)  # другой сбор уже идёт — молча уступаем
+        raise SystemExit(main())

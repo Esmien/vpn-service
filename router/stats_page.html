@@ -134,7 +134,14 @@ const actCell = (u) => {
   return copy + main;
 };
 
-fetch("data.json", { cache: "no-store" }).then(r => r.json()).then(d => {
+// Каждый F5 сначала пересобирает снимок по требованию (свежий опрос xray + список
+// пользователей), потом читает data.json — иначе после создания/удаления до 5 минут
+// висела бы устаревшая таблица.
+const fresh = () => fetch("api/refresh", {
+  method: "POST", headers: { "Content-Type": "application/json" }, body: "{}"
+}).catch(() => null);
+
+const paint = (d) => {
   document.getElementById("meta").innerHTML =
     "обновлено <b>" + dt(d.updated) + "</b> · сбор с <b>" + dt(d.since) +
     "</b> · активный цвет <b>" + d.color + "</b>";
@@ -160,9 +167,20 @@ fetch("data.json", { cache: "no-store" }).then(r => r.json()).then(d => {
   document.getElementById("foot").textContent = silent.length
     ? "Без единого подключения: " + silent.join(", ")
     : "Все, кому выданы ключи, хотя бы раз подключались.";
-}).catch(() => {
-  document.getElementById("meta").textContent = "не удалось загрузить data.json";
-});
+};
+
+const load = async () => {
+  document.getElementById("meta").textContent = "обновляю…";
+  try {
+    await fresh();
+    paint(await (await fetch("data.json", { cache: "no-store" })).json());
+  } catch (e) {
+    document.getElementById("meta").textContent = "не удалось загрузить data.json";
+  }
+};
+
+load();
+window.addEventListener("pageshow", (e) => { if (e.persisted) load(); });
 
 const out = document.getElementById("genout");
 const btn = document.getElementById("go");
@@ -246,6 +264,7 @@ usersBody.addEventListener("click", (e) => {
     if (d.ok && mode === "reissue") {
       showLinks(d.name, d.links, d.hint || "перевыпущено");
       cell.innerHTML = '<span class="ok-inline">готово</span>';
+      load();
     } else if (d.ok) {
       location.reload();
     } else {
@@ -271,6 +290,7 @@ btn.addEventListener("click", async () => {
     if (d.ok) {
       showLinks(d.name, d.links, d.hint || "готово");
       document.getElementById("name").value = "";
+      load();
     } else if (d.exists) {
       showLinks(d.name, d.links, "такой уже есть, вот его ссылки");
     } else {

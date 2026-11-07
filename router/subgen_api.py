@@ -57,13 +57,24 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         route = self.path.rstrip("/")
-        if route not in ("/new", "/del", "/reissue"):
+        if route not in ("/new", "/del", "/reissue", "/refresh"):
             return self._send(404, {"ok": False, "error": "not found"})
         try:
             length = int(self.headers.get("Content-Length") or 0)
-            data = json.loads(self.rfile.read(length) or b"{}")
+            raw = self.rfile.read(length) or b"{}"
+            data = json.loads(raw)
         except Exception:
             return self._send(400, {"ok": False, "error": "bad request"})
+
+        if route == "/refresh":
+            try:
+                r = subprocess.run(["python3", f"{BASE}/stats_collect.py"],
+                                   cwd=BASE, capture_output=True, text=True, timeout=90)
+            except subprocess.TimeoutExpired:
+                return self._send(504, {"ok": False, "error": "сбор не уложился в 90 с"})
+            return self._send(200 if r.returncode == 0 else 500,
+                              {"ok": r.returncode == 0,
+                               "error": "" if r.returncode == 0 else (r.stderr or "")[-300:]})
 
         name = str(data.get("name", "")).strip()
         if not NAME_RE.match(name):
