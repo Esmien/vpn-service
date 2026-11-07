@@ -207,6 +207,7 @@ rules:
   - IP-CIDR,10.0.0.0/8,DIRECT,no-resolve
   - IP-CIDR,172.16.0.0/12,DIRECT,no-resolve
   - IP-CIDR,192.168.0.0/16,DIRECT,no-resolve
+  - DOMAIN-SUFFIX,esmien.ru,DIRECT
   - MATCH,{WHITE_GROUP}
 """)
 
@@ -214,23 +215,40 @@ rules:
     sing = {"log": {"level": "warn"},
             "inbounds": [{"type": "mixed", "tag": "mixed-in", "listen": "127.0.0.1", "listen_port": 2080}],
             "outbounds": outs,
-            "route": {"rules": [{"outbound": white[0]["name"] if white else "direct"}]}}
+            "route": {"rules": [{"domain_suffix": [".esmien.ru"], "outbound": "direct"}, {"outbound": white[0]["name"] if white else "direct"}]}}
     (token_dir / "singbox.json").write_text(json.dumps(sing, indent=2, ensure_ascii=False))
     token_dir.chmod(0o755)
+
+
+def _extra_nodes(token_dir: Path) -> list:
+    """Manual, per-token extra nodes (owner-only tests). Never part of the default build."""
+    path = token_dir / "extra_nodes.json"
+    if not path.exists():
+        return []
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (ValueError, OSError):
+        return []
+    return data if isinstance(data, list) else []
 
 
 def build_meta(token_dir: Path, uid: str) -> None:
     """One visible node. Every scenario is decided by the server, not by the client."""
     path = _BRAND["paths"]["general"]
     link = vless(uid, path, META_TAG)
-    (token_dir / "list.txt").write_text(base64.b64encode((link + "\n").encode()).decode() + "\n")
+    extra = _extra_nodes(token_dir)
+    links = [link] + [e["link"] for e in extra if e.get("link")]
+    names = [META_TAG] + [e["name"] for e in extra if e.get("name")]
+    (token_dir / "list.txt").write_text(
+        base64.b64encode(("\n".join(links) + "\n").encode()).decode() + "\n")
+    names_yaml = "".join(f'      - {json.dumps(n, ensure_ascii=False)}\n' for n in names)
     (token_dir / "announce").write_text(META_ANNOUNCE + "\n", encoding="utf-8")
 
     # FlClash renders the YAML comments as the profile description and mangles non-ASCII
     # there (UTF-8 shown as mojibake), so the file carries one ASCII marker only. The
     # human-readable copy lives in the `announce` header and on /u/<token>.
     header = "# Esmien VPN"
-    proxies = clash_proxy(uid, META_TAG, path)
+    proxies = clash_proxy(uid, META_TAG, path) + "".join(e.get("clash", "") for e in extra)
     (token_dir / "clash.yaml").write_text(f"""{header}
 mixed-port: 7890
 allow-lan: false
@@ -250,13 +268,13 @@ proxies:
   - name: "Esmien VPN"
     type: select
     proxies:
-      - {json.dumps(META_TAG, ensure_ascii=False)}
-rules:
+{names_yaml}rules:
   - IP-CIDR,127.0.0.0/8,DIRECT,no-resolve
   - IP-CIDR,10.0.0.0/8,DIRECT,no-resolve
   - IP-CIDR,172.16.0.0/12,DIRECT,no-resolve
   - IP-CIDR,192.168.0.0/16,DIRECT,no-resolve
   - DOMAIN-SUFFIX,local,DIRECT
+  - DOMAIN-SUFFIX,esmien.ru,DIRECT
   - MATCH,Esmien VPN
 """, encoding="utf-8")
 
@@ -266,8 +284,9 @@ rules:
     sing = {"log": {"level": "warn"},
             "inbounds": [{"type": "mixed", "tag": "mixed-in", "listen": "127.0.0.1",
                           "listen_port": 2080}],
-            "outbounds": [out, {"type": "direct", "tag": "direct"}],
-            "route": {"rules": [{"outbound": META_TAG}]}}
+            "outbounds": [out] + [e["sing"] for e in extra if e.get("sing")]
+                         + [{"type": "direct", "tag": "direct"}],
+            "route": {"rules": [{"domain_suffix": [".esmien.ru"], "outbound": "direct"}, {"outbound": META_TAG}]}}
     (token_dir / "singbox.json").write_text(json.dumps(sing, indent=2, ensure_ascii=False),
                                             encoding="utf-8")
     token_dir.chmod(0o755)
@@ -324,6 +343,7 @@ rules:
   - IP-CIDR,172.16.0.0/12,DIRECT,no-resolve
   - IP-CIDR,192.168.0.0/16,DIRECT,no-resolve
   - DOMAIN-SUFFIX,local,DIRECT
+  - DOMAIN-SUFFIX,esmien.ru,DIRECT
   - DOMAIN-SUFFIX,google.com,{FR}
   - DOMAIN-SUFFIX,googleapis.com,{FR}
   - DOMAIN-SUFFIX,gstatic.com,{FR}
@@ -344,6 +364,7 @@ rules:
             "inbounds": [{"type": "mixed", "tag": "mixed-in", "listen": "127.0.0.1", "listen_port": 2080}],
             "outbounds": [sb_ours(n, p, a) for n, p, a in ours] + [{"type": "direct", "tag": "direct"}],
             "route": {"rules": [
+                {"domain_suffix": [".esmien.ru"], "outbound": "direct"},
                 {"domain_suffix": ["google.com", "googleapis.com", "gstatic.com",
                                    "googleusercontent.com", "withgoogle.com"], "outbound": FR},
                 {"domain_suffix": [".ru", ".su"] + RU_DOMAINS, "outbound": ru},
