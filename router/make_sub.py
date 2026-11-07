@@ -297,7 +297,7 @@ def build(token_dir: Path, uid: str) -> None:
     kind = kind_file.read_text().strip() if kind_file.exists() else ""
     if kind == "whitelist":
         return build_whitelist(token_dir, uid)
-    if kind == "meta":
+    if kind != "full":  # один узел — норма, полный список — только явным kind=full
         return build_meta(token_dir, uid)
     relay, white = load_nodes()
     ours = [(EE, _BRAND["paths"]["general"], HOST), (FR, _BRAND["paths"]["france"], HOST),

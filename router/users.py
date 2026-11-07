@@ -158,7 +158,7 @@ def cmd_add(name: str, title: str | None, uid: str | None,
         print(out)
         return 1
 
-    make_dir(token, name, title)
+    make_dir(token, name, title, kind="meta")
     if lte_token:
         make_dir(lte_token, name, lte_title(title), kind="whitelist")
     save(users)
