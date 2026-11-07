@@ -1,0 +1,7 @@
+[Unit]
+Description=Collect per-user VPN traffic stats from xray StatsService
+After=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /root/vpn-router/stats_collect.py

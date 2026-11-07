@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Esmien VPN — статистика</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 24px 16px 48px;
+    background: #0f1115; color: #e6e8ee;
+    font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Ubuntu, sans-serif;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; }
+  h1 { font-size: 20px; font-weight: 600; margin: 0 0 4px; letter-spacing: -0.01em; }
+  .meta { color: #8b93a7; font-size: 13px; margin-bottom: 22px; }
+  .meta b { color: #b9c0d0; font-weight: 500; }
+  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .08em;
+       color: #8b93a7; font-weight: 600; margin: 26px 0 10px; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: right; padding: 9px 10px; border-bottom: 1px solid #1d222c; }
+  th:first-child, td:first-child { text-align: left; }
+  th { font-size: 12px; color: #77809a; font-weight: 500; text-transform: uppercase; letter-spacing: .05em; }
+  td { font-variant-numeric: tabular-nums; }
+  tr:last-child td { border-bottom: none; }
+  .zero { color: #5a6274; }
+  .live { color: #6ee7a8; }
+  .idle { color: #f0b95c; }
+  .err { margin: 0 0 18px; padding: 10px 12px; border-radius: 8px;
+         background: #3a1f22; color: #ffb4b4; font-size: 13px; }
+  .foot { margin-top: 28px; color: #5a6274; font-size: 12px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Esmien VPN</h1>
+  <div class="meta" id="meta">загрузка…</div>
+  <div id="err"></div>
+
+  <h2>Люди</h2>
+  <table>
+    <thead>
+      <tr><th>Человек</th><th>24 ч</th><th>7 дней</th><th>Всего</th><th>Последнее</th></tr>
+    </thead>
+    <tbody id="users"></tbody>
+  </table>
+
+  <h2>Маршруты</h2>
+  <table>
+    <thead><tr><th>Маршрут</th><th>Всего</th></tr></thead>
+    <tbody id="routes"></tbody>
+  </table>
+
+  <div class="foot" id="foot"></div>
+</div>
+
+<script>
+const fmt = (mb) => {
+  if (!mb) return "—";
+  if (mb < 1) return Math.round(mb * 1024) + " KB";
+  if (mb < 1024) return mb.toFixed(1) + " MB";
+  return (mb / 1024).toFixed(2) + " GB";
+};
+const ago = (ts) => {
+  if (!ts) return "не подключался";
+  const s = Math.max(0, Math.floor(Date.now() / 1000) - ts);
+  if (s < 90) return "только что";
+  if (s < 3600) return Math.floor(s / 60) + " мин назад";
+  if (s < 86400) return Math.floor(s / 3600) + " ч назад";
+  return Math.floor(s / 86400) + " дн назад";
+};
+const dt = (ts) => ts ? new Date(ts * 1000).toLocaleString("ru-RU",
+  { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "—";
+
+fetch("data.json", { cache: "no-store" }).then(r => r.json()).then(d => {
+  document.getElementById("meta").innerHTML =
+    "обновлено <b>" + dt(d.updated) + "</b> · сбор с <b>" + dt(d.since) +
+    "</b> · активный цвет <b>" + d.color + "</b>";
+
+  if (d.error) document.getElementById("err").innerHTML =
+    '<div class="err">последний опрос не удался: ' + d.error + "</div>";
+
+  const rows = d.users.map(u => {
+    const cls = u.total > 0 ? (u.h24 > 0 ? "live" : "idle") : "zero";
+    const mark = u.total > 0 ? (u.h24 > 0 ? "" : " ·") : "";
+    return "<tr><td>" + u.name + "</td><td>" + fmt(u.h24) + "</td><td>" + fmt(u.d7) +
+      '</td><td class="' + cls + '">' + fmt(u.total) + mark + "</td><td>" + ago(u.last) + "</td></tr>";
+  });
+  document.getElementById("users").innerHTML = rows.join("") ||
+    '<tr><td colspan="5" class="zero">данных пока нет</td></tr>';
+
+  document.getElementById("routes").innerHTML = d.routes.map(r =>
+    "<tr><td>" + r.label + "</td><td>" + fmt(r.total) + "</td></tr>").join("") ||
+    '<tr><td colspan="2" class="zero">данных пока нет</td></tr>';
+
+  const silent = d.users.filter(u => !u.total).map(u => u.name);
+  document.getElementById("foot").textContent = silent.length
+    ? "Без единого подключения: " + silent.join(", ")
+    : "Все, кому выданы ключи, хотя бы раз подключались.";
+}).catch(() => {
+  document.getElementById("meta").textContent = "не удалось загрузить data.json";
+});
+</script>
+</body>
+</html>
