@@ -152,8 +152,22 @@ def mb(n: float) -> float:
     return round(n / 1048576, 2)
 
 
+def page_links() -> dict:
+    """token -> /u/ page, so the dashboard can hand out links in one click."""
+    try:
+        users = json.loads((BASE / "users.json").read_text())
+    except (OSError, ValueError):
+        return {}
+    brand = json.loads((BASE / "brand.json").read_text())
+    return {name: f"https://{brand['host']}:{brand['port']}/u/{u['token']}"
+            for name, u in users.items() if u.get("token")}
+
+
 def render(st: dict) -> dict:
     now = int(time.time())
+    pages = page_links()
+    for name in pages:  # показываем всех, кому выдан ключ, даже если трафика ещё не было
+        st["users"].setdefault(name, {"total": 0, "last": 0, "samples": []})
     users = []
     for name, rec in st["users"].items():
         h24 = sum(d for ts, d in rec["samples"] if now - ts <= 86400)
@@ -161,6 +175,7 @@ def render(st: dict) -> dict:
         users.append({
             "key": name,
             "deletable": not name.startswith("@"),
+            "page": pages.get(name, ""),
             "name": LABELS.get(name, name),
             "h24": mb(h24),
             "d7": mb(d7),

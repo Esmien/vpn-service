@@ -62,6 +62,12 @@
   }
   .err-inline { color: #ffb4b4; font-size: 12px; }
   .ok-inline { color: #6ee7a8; font-size: 12px; }
+  .copy-row {
+    padding: 4px 9px; margin-right: 6px; font-size: 12px; border-radius: 7px; cursor: pointer;
+    border: 1px solid #2c3546; background: transparent; color: #8b93a7; font-family: inherit;
+  }
+  .copy-row:hover { color: #cfd6e6; border-color: #3b4a63; }
+  .copy-row.done { color: #6ee7a8; border-color: #2f5741; }
   .re {
     padding: 4px 9px; font-size: 12px; border-radius: 7px; cursor: pointer;
     border: 1px solid #2c3546; background: transparent; color: #8fb7ff; font-family: inherit;
@@ -119,11 +125,13 @@ const dt = (ts) => ts ? new Date(ts * 1000).toLocaleString("ru-RU",
 
 const PROTECTED = new Set(["Владислав"]);
 const actCell = (u) => {
-  if (!u.deletable) return "";
-  if (PROTECTED.has(u.key)) {
-    return '<button class="re" data-name="' + u.key + '">перевыпустить</button>';
-  }
-  return '<button class="del" data-name="' + u.key + '">удалить</button>';
+  const copy = u.page
+    ? '<button class="copy-row" title="скопировать ссылку на страницу" data-url="' + u.page + '">ссылка</button>' : "";
+  if (!u.deletable) return copy;
+  const main = PROTECTED.has(u.key)
+    ? '<button class="re" data-name="' + u.key + '">перевыпустить</button>'
+    : '<button class="del" data-name="' + u.key + '">удалить</button>';
+  return copy + main;
 };
 
 fetch("data.json", { cache: "no-store" }).then(r => r.json()).then(d => {
@@ -188,6 +196,17 @@ usersBody.addEventListener("click", (e) => {
   const re = e.target.closest(".re");
   const yes = e.target.closest(".yes");
   const no = e.target.closest(".no");
+  const cp = e.target.closest(".copy-row");
+
+  if (cp) {
+    navigator.clipboard.writeText(cp.dataset.url).then(() => {
+      const old = cp.textContent;
+      cp.textContent = "ок";
+      cp.classList.add("done");
+      setTimeout(() => { cp.textContent = old; cp.classList.remove("done"); }, 1200);
+    });
+    return;
+  }
 
   if (del || re) {
     const who = (del || re).dataset.name;
