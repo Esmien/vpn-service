@@ -24,7 +24,7 @@ GROUPS = {
     # Google: France is primary, Finland only takes over when France is dead
     # (both pass the Gemini geo verdict, but France is the one we sell).
     GOOGLE_GROUP: ["fr"],
-    RU_GROUP: ["ru1"],
+    RU_GROUP: ["p15", "p17"],
 }
 
 # Native xray failover. The balancer only holds one node per group, so when that node
@@ -37,7 +37,7 @@ FALLBACK = {GOOGLE_GROUP: "fi", RU_GROUP: "direct"}
 # Ordered preference used by the watchdog when it prunes/restores a group.
 PREFERENCE = {
     GOOGLE_GROUP: ["fr", "fi", "direct"],
-    RU_GROUP: ["ru1", "direct"],
+    RU_GROUP: ["p15", "p17", "direct"],
 }
 
 # Google falls back to a single node; RU keeps the whole pool in the balancer and lets
