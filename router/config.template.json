@@ -41,6 +41,10 @@
      {
       "id": "<VLESS_UUID>",
       "email": "ws-in:Владислав"
+     },
+     {
+      "id": "<VLESS_UUID>",
+      "email": "ws-in:Антон"
      }
     ],
     "decryption": "none"
@@ -99,6 +103,10 @@
      {
       "id": "<VLESS_UUID>",
       "email": "in-general:Владислав"
+     },
+     {
+      "id": "<VLESS_UUID>",
+      "email": "in-general:Антон"
      }
     ],
     "decryption": "none"
@@ -157,6 +165,10 @@
      {
       "id": "<VLESS_UUID>",
       "email": "in-france:Владислав"
+     },
+     {
+      "id": "<VLESS_UUID>",
+      "email": "in-france:Антон"
      }
     ],
     "decryption": "none"
@@ -215,6 +227,10 @@
      {
       "id": "<VLESS_UUID>",
       "email": "in-test:Владислав"
+     },
+     {
+      "id": "<VLESS_UUID>",
+      "email": "in-test:Антон"
      }
     ],
     "decryption": "none"
@@ -273,6 +289,10 @@
      {
       "id": "<VLESS_UUID>",
       "email": "in-fi:Владислав"
+     },
+     {
+      "id": "<VLESS_UUID>",
+      "email": "in-fi:Антон"
      }
     ],
     "decryption": "none"

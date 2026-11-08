@@ -27,7 +27,8 @@ LABELS = {                       # display names only; state keys stay stable
 WINDOW = 7 * 86400
 ROUTE_LABELS = {
     "direct": "Эстония (direct)",
-    "ru1": "RU-хост",
+    "p15": "Москва (подписка)",
+    "p17": "Новосибирск (подписка)",
     "fr": "Франция (Gemini)",
     "fi": "Финляндия (Gemini)",
 }

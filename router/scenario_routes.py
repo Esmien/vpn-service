@@ -63,7 +63,7 @@ GOOGLE_DOMAINS = ["domain:google.com", "domain:googleapis.com", "domain:gstatic.
 # Probe URL must answer from every exit we own: gstatic times out from the RU box,
 # which used to make leastPing treat the RU group as empty and stall .ru traffic.
 OBSERVATORY = {
-    "subjectSelector": ["fr", "fi", "p15", "p16", "p17", "ru1"],
+    "subjectSelector": ["fr", "fi", "p15", "p16", "p17"],
     "probeUrl": "https://cp.cloudflare.com/generate_204",
     "probeInterval": "30s",
     "enableConcurrency": True,
