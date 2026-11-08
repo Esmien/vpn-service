@@ -13,7 +13,7 @@ from pathlib import Path
 SRC = Path(sys.argv[1] if len(sys.argv) > 1 else "/root/vpn-router/config.json")
 DST = Path(sys.argv[2] if len(sys.argv) > 2 else "/root/vpn-service/router/config.template.json")
 KEEP_IN = {"ws-in", "in-general", "in-france", "in-test", "in-fi"}
-KEEP_OUT = {"fr", "fi", "direct", "blocked"}
+KEEP_OUT = {"fr", "fi", "p15", "p17", "direct", "blocked"}
 
 
 def mask(obj):

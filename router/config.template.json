@@ -190,6 +190,62 @@
    }
   },
   {
+   "protocol": "trojan",
+   "settings": {
+    "servers": [
+     {
+      "address": "go.rf-video.shop",
+      "port": 443,
+      "password": "<PASSWORD>"
+     }
+    ]
+   },
+   "streamSettings": {
+    "network": "grpc",
+    "security": "tls",
+    "tlsSettings": {
+     "serverName": "go.rf-video.shop",
+     "alpn": [
+      "h2"
+     ],
+     "fingerprint": "firefox"
+    },
+    "grpcSettings": {
+     "serviceName": "d15820f78a67",
+     "multiMode": false
+    }
+   },
+   "tag": "p15"
+  },
+  {
+   "protocol": "trojan",
+   "settings": {
+    "servers": [
+     {
+      "address": "3.cdn-ui.info",
+      "port": 443,
+      "password": "<PASSWORD>"
+     }
+    ]
+   },
+   "streamSettings": {
+    "network": "grpc",
+    "security": "tls",
+    "tlsSettings": {
+     "serverName": "3.cdn-ui.info",
+     "alpn": [
+      "h2"
+     ],
+     "fingerprint": "firefox"
+    },
+    "grpcSettings": {
+     "serviceName": "053c0964979c",
+     "multiMode": false
+    }
+   },
+   "tag": "p17"
+  },
+  {
    "tag": "direct",
    "protocol": "freedom",
    "settings": {
@@ -229,6 +285,25 @@
      "domain:google.dev"
     ],
     "balancerTag": "bal-google"
+   },
+   {
+    "type": "field",
+    "domain": [
+     "domain:ru",
+     "domain:su",
+     "domain:рф",
+     "domain:vk.com",
+     "domain:vk.me",
+     "domain:vk-cdn.net",
+     "domain:userapi.com",
+     "domain:mycdn.me",
+     "domain:max.ru",
+     "domain:ozon.com",
+     "domain:wbstatic.net",
+     "domain:sberbank.com",
+     "domain:tinkoff.ru"
+    ],
+    "balancerTag": "bal-ru"
    },
    {
     "type": "field",
@@ -278,13 +353,26 @@
      "type": "leastPing"
     },
     "fallbackTag": "fi"
+   },
+   {
+    "tag": "bal-ru",
+    "selector": [
+     "p15",
+     "p17"
+    ],
+    "strategy": {
+     "type": "leastPing"
+    },
+    "fallbackTag": "direct"
    }
   ]
  },
  "observatory": {
   "subjectSelector": [
    "fi",
-   "fr"
+   "fr",
+   "p15",
+   "p17"
   ],
   "probeUrl": "https://cp.cloudflare.com/generate_204",
   "probeInterval": "30s",
