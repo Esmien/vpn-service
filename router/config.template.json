@@ -307,13 +307,6 @@
    },
    {
     "type": "field",
-    "inboundTag": [
-     "in-general"
-    ],
-    "outboundTag": "direct"
-   },
-   {
-    "type": "field",
     "ip": [
      "8.8.4.0/24",
      "8.8.8.0/24",
@@ -340,7 +333,7 @@
    {
     "type": "field",
     "network": "tcp,udp",
-    "outboundTag": "fr"
+    "outboundTag": "direct"
    }
   ],
   "balancers": [

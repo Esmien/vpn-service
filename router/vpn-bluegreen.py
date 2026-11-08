@@ -164,7 +164,7 @@ def probe_direct(color: str, timeout: float = 1.5) -> tuple[int, int]:
 def probe_nginx() -> bool:
     brand = json.loads((BASE / "brand.json").read_text())
     ok = True
-    for path in ("/general", "/france", "/fi"):
+    for path in ("/general", "/ws"):
         r = subprocess.run(["curl", "-sS", "-m", "8", "--resolve",
                             f"{brand['host']}:{brand['port']}:127.0.0.1", "-o", "/dev/null",
                             "-w", "%{http_code}", f"https://{brand['host']}:{brand['port']}{path}"],
