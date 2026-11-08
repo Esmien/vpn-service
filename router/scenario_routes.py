@@ -83,9 +83,16 @@ def install(cfg: dict) -> dict:
     ru_domains = []
     google_ips = []
     inbound_rules = []
+    api_rule = None
     for r in rules:
         if "inboundTag" in r:
-            inbound_rules.append(r)
+            # api-in (StatsService) must be matched BEFORE the geoip:private block:
+            # its destination is 127.0.0.1, so a later block rule swallows it and
+            # every stats query dies with "failed to dial 127.0.0.1:<port>".
+            if r.get("inboundTag") == ["api-in"]:
+                api_rule = r
+            else:
+                inbound_rules.append(r)
         elif r.get("ip") == ["geoip:private"]:
             continue
         elif r.get("protocol") == ["bittorrent"]:
@@ -95,7 +102,7 @@ def install(cfg: dict) -> dict:
         elif "ip" in r:
             google_ips = r["ip"]
 
-    head = [
+    head = ([api_rule] if api_rule else []) + [
         {"type": "field", "ip": ["geoip:private"], "outboundTag": "blocked"},
         {"type": "field", "protocol": ["bittorrent"], "outboundTag": "blocked"},
         {"type": "field", "domain": GOOGLE_DOMAINS, "balancerTag": GOOGLE_GROUP},
