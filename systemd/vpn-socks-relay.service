@@ -1,0 +1,13 @@
+[Unit]
+Description=Stable SOCKS entry for the Hysteria2 path (routes into Xray blue/green)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /usr/local/bin/vpn-socks-relay.py
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

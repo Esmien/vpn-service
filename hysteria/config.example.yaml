@@ -32,3 +32,13 @@ bandwidth:
 ignoreClientBandwidth: false
 disableUDP: false
 udpIdleTimeout: 60s
+
+# Every stream goes to Xray's loopback SOCKS inbound (through the stable relay
+# vpn-socks-relay, which follows the blue/green colour), so server-side routing
+# stays identical to the VLESS entry: Google -> FR/FI, .ru -> Moscow, rest -> EE.
+outbounds:
+  - name: xray
+    type: socks5
+    socks5:
+      addr: 127.0.0.1:10809
+      udp: true

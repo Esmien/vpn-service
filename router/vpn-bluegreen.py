@@ -100,7 +100,8 @@ def lint(cfg: dict) -> list[str]:
         ports.add(port)
         if ib.get("listen") not in ("127.0.0.1", "::1"):
             errs.append(f"{ib.get('tag')}: listen={ib.get('listen')} — инбаунд опубликован в интернет")
-        if ib.get("protocol") != "dokodemo-door" and not (ib.get("settings", {}).get("clients") or []):
+        if (ib.get("protocol") not in ("dokodemo-door", "socks")
+                and not (ib.get("settings", {}).get("clients") or [])):
             errs.append(f"{ib.get('tag')}: нет ни одного клиента")
     bal_tags = [b.get("tag") for b in (cfg.get("routing", {}).get("balancers") or [])]
     for n, rule in enumerate(cfg.get("routing", {}).get("rules", []), 1):
