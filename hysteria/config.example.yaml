@@ -1,0 +1,34 @@
+listen: :443
+
+tls:
+  cert: /etc/letsencrypt/live/esmien-wildcard/fullchain.pem
+  key: /etc/letsencrypt/live/esmien-wildcard/privkey.pem
+
+auth:
+  type: password
+  password: "__AUTH_PASSWORD__"
+
+obfs:
+  type: salamander
+  salamander:
+    password: "__OBFS_PASSWORD__"
+
+masquerade:
+  type: proxy
+  proxy:
+    url: http://127.0.0.1
+    rewriteHost: true
+
+quic:
+  initStreamReceiveWindow: 8388608
+  maxStreamReceiveWindow: 8388608
+  initConnReceiveWindow: 20971520
+  maxConnReceiveWindow: 20971520
+
+bandwidth:
+  up: 200 mbps
+  down: 500 mbps
+
+ignoreClientBandwidth: false
+disableUDP: false
+udpIdleTimeout: 60s

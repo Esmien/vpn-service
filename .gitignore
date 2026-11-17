@@ -13,3 +13,6 @@ vpn-color
 .applied
 pages_index.json
 users.md
+
+# hysteria: runtime config carries the auth/obfs secrets
+hysteria/config.yaml
