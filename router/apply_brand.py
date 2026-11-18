@@ -42,7 +42,7 @@ TEMPLATE = """server {{
     ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
     access_log /var/log/nginx/vpn-{logname}.log vpnx;
 
-    location = / {{ default_type text/plain; return 200 "ok\\n"; }}
+    location = / {{ root /var/www/vpn-stub; try_files /index.html =404; default_type text/html; }}
 {locations}
     location ~ ^/sub/(?<esmien_sub_token>[A-Za-z0-9_-]+)/?$ {{
         root /var/www/esmien-sub;
