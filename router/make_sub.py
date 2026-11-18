@@ -357,10 +357,10 @@ def build_meta(token_dir: Path, uid: str) -> None:
     ws_tag = (WS_COMPAT_TAG if compat else META_TAG)
     ws_link = vless(uid, path, ws_tag)
     extra = _extra_nodes(token_dir)
-    v_link = vless_vision(uid)
+    v_link = None  # Vision снят: у владельца он не проходит
     # REALITY-вход с камо снят: чужой SNI на нашем IP — подпись подмены, из-за неё
     # оператор и морозил поток. Остались входы на своём домене.
-    pairs = [(v_link, VISION_TAG)]
+    pairs = [(v_link, VISION_TAG)] if v_link else []
     if compat or not r_link:
         pairs.append((ws_link, WS_COMPAT_TAG if compat else META_TAG))
     pairs = [(l, n) for l, n in pairs if l]
@@ -377,7 +377,7 @@ def build_meta(token_dir: Path, uid: str) -> None:
     # there (UTF-8 shown as mojibake), so the file carries one ASCII marker only. The
     # human-readable copy lives in the `announce` header and on /u/<token>.
     header = "# Esmien VPN"
-    proxies = clash_proxy_vision(uid)
+    proxies = clash_proxy_vision(uid) if v_link else ""
     if compat or not r_link:
         proxies += clash_proxy(uid, WS_COMPAT_TAG if compat else META_TAG, path)
     proxies += "".join(e.get("clash", "") for e in extra)
@@ -414,11 +414,11 @@ proxies:
            "transport": {"type": "ws", "path": path, "headers": {"Host": HOST}},
            "tls": {"enabled": True, "server_name": HOST}}
     if r_link and not compat:
-        outs = [sing_vision(uid)]
+        outs = [sing_vision(uid)] if v_link else []
         match_tag = REALITY_TAG
     elif r_link:
         out["tag"] = WS_COMPAT_TAG
-        outs = [sing_vision(uid), out]
+        outs = ([sing_vision(uid)] if v_link else []) + [out]
         match_tag = REALITY_TAG
     else:
         outs = [out]

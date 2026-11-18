@@ -163,6 +163,27 @@ def build(write: bool = True) -> int:
     return 0
 
 
+def _repoint_logs(color: str) -> None:
+    """Keep /var/log/xray pointed at the colour that actually carries traffic.
+
+    Both colours write into their own docker volume; after a flip the old symlink kept
+    showing the idle container's log, so live client sessions looked like silence.
+    """
+    r = subprocess.run(["docker", "inspect", CONTAINERS[color], "--format",
+                        '{{range .Mounts}}{{if eq .Destination "/var/log/xray"}}{{.Source}}{{end}}{{end}}'],
+                       capture_output=True, text=True)
+    src = (r.stdout or "").strip()
+    if not src:
+        return
+    link = Path("/var/log/xray")
+    try:
+        if link.is_symlink() or link.exists():
+            link.unlink()
+        link.symlink_to(src)
+    except OSError as exc:
+        print(f"не смог переключить {link}: {exc}")
+
+
 def probe_direct(color: str, timeout: float = 1.5) -> tuple[int, int]:
     """GET every WS inbound directly; a healthy xray answers 400 (not 502/000)."""
     cfg = load(color)
@@ -309,6 +330,7 @@ def cmd_apply() -> int:
     print(f"{tgt}: {good}/{total} инбаундов отвечают, переключаю nginx…")
     if flip(tgt) != 0:
         return 1
+    _repoint_logs(tgt)
     print(f"готово: трафик на {tgt}, {cur} ({CONTAINERS[cur]}) остаётся живым до следующего apply")
     return 0
 

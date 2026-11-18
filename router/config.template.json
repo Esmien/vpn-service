@@ -320,7 +320,6 @@
    {
     "tag": "bal-google",
     "selector": [
-     "fi",
      "fr"
     ],
     "strategy": {

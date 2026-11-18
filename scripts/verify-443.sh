@@ -23,15 +23,12 @@ chk "vpn :8443 /ws"     '^(200|400)$' --resolve "$HOST:8443:127.0.0.1" "https://
 chk "vpn :2087 /ws"     '^(200|400)$' --resolve "$HOST:2087:127.0.0.1" "https://$HOST:2087/ws"
 chk "подписка :8443"    '^200$'       --resolve "$HOST:8443:127.0.0.1" "https://$HOST:8443/sub/$(ls /var/www/esmien-sub | head -1)"
 
-echo "== Vision (SNI edge.esmien.ru -> vision-in, Xray терминирует TLS)"
-if echo | timeout 8 openssl s_client -connect 127.0.0.1:443 -servername edge.esmien.ru 2>/dev/null \
-   | openssl x509 -noout -subject 2>/dev/null | grep -q 'esmien.ru'; then
-  echo "  ok   :443 отдаёт наш серт для edge.esmien.ru"
-else echo "  FAIL Vision не отвечает на edge.esmien.ru"; fails=$((fails+1)); fi
-for p in 443 4443; do
-  if timeout 4 bash -c "echo > /dev/tcp/127.0.0.1/$p" 2>/dev/null; then
-    echo "  ok   :$p слушает"
-  else echo "  FAIL :$p не слушает"; fails=$((fails+1)); fi
+echo "== WS-входы на 8443 / 2087 (VLESS+TLS+WS)"
+for hp in "127.0.0.1:8443 /ws" "127.0.0.1:2087 /ws"; do
+  port=${hp%% *}; path=${hp##* }
+  code=$(curl -sk -o /dev/null -m 8 -w '%{http_code}' --resolve vpn.esmien.ru:${port##*:}:127.0.0.1 "https://vpn.esmien.ru:${port##*:}${path}" 2>/dev/null)
+  if [[ "$code" == "400" || "$code" == "101" ]]; then echo "  ok   ${port}${path} -> $code"
+  else echo "  FAIL ${port}${path} -> $code"; fails=$((fails+1)); fi
 done
 
 echo "== палец по IP (unknown SNI должен молчать)"
