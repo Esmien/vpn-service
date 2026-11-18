@@ -99,6 +99,7 @@ def reality_params() -> dict | None:
 REALITY_SEEN = reality_params()
 REALITY_TAG = "🇪🇪 Эстония (все сервисы)"
 WS_COMPAT_TAG = "🇪🇪 Эстония (совместимость)"
+WS_COMPAT_DEFAULT = True
 
 
 def vless_reality(uid: str, tag: str = REALITY_TAG, addr: str = IP) -> str | None:
@@ -286,7 +287,7 @@ rules:
 def _extra_nodes(token_dir: Path) -> list:
     """Доп. узлы (UDP-резерв и пр.) — только для токенов с маркером «compat»:
     лишний узел в списке = клиент выбирает его и решает, что VPN не работает."""
-    if not (token_dir / "compat").exists():
+    if not (token_dir / "udp").exists():
         return []
     """Manual, per-token extra nodes (owner-only tests). Never part of the default build."""
     path = token_dir / "extra_nodes.json"
@@ -310,7 +311,9 @@ def build_meta(token_dir: Path, uid: str) -> None:
     # WS-узел выдаётся только по явному маркеру «compat» в каталоге токена: по умолчанию
     # подписка несёт один REALITY-узел, а старые WS-входы (2087/8443) остаются живыми,
     # чтобы уже скачанные профили не отваливались в момент обновления.
-    compat = bool(r_link) and (token_dir / "compat").exists()
+    # WS-узел в списке по умолчанию: если REALITY у конкретного клиента не поднимется,
+    # у него есть рабочий вход без правки подписки. Выключатель — WS_COMPAT_DEFAULT.
+    compat = bool(r_link) and (WS_COMPAT_DEFAULT or (token_dir / "compat").exists())
     ws_tag = (WS_COMPAT_TAG if compat else META_TAG)
     ws_link = vless(uid, path, ws_tag)
     extra = _extra_nodes(token_dir)
