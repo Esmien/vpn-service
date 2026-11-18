@@ -21,7 +21,8 @@ GOOGLE_GROUP = "bal-google"
 RU_GROUP = "bal-ru"
 
 GROUPS = {
-    # Pin Gemini to FR; no automatic FI/direct fallback until verified.
+    # Gemini goes out through the French relay: phone works on it. Estonia shows the
+    # "not supported in your country" stub, FI does not load the page at all.
     GOOGLE_GROUP: ["fr"],
     RU_GROUP: ["p15", "p17"],
 }
@@ -120,6 +121,10 @@ def install(cfg: dict) -> dict:
     head = ([api_rule] if api_rule else []) + [
         {"type": "field", "ip": ["geoip:private"], "outboundTag": "blocked"},
         {"type": "field", "protocol": ["bittorrent"], "outboundTag": "blocked"},
+        # The FR/FI relays are trojan and cannot carry UDP at all, so QUIC dies silently
+        # there and the browser hangs on its own timeout. Refusing UDP/443 makes clients
+        # fall back to TCP at once; without this rule Gemini web reports a generic error.
+        {"type": "field", "network": "udp", "port": 443, "outboundTag": "blocked"},
         {"type": "field", "domain": GOOGLE_DOMAINS, "balancerTag": GOOGLE_GROUP},
         {"type": "field", "domain": ru_domains, "balancerTag": RU_GROUP},
     ]

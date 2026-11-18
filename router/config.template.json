@@ -276,6 +276,12 @@
    },
    {
     "type": "field",
+    "network": "udp",
+    "port": 443,
+    "outboundTag": "blocked"
+   },
+   {
+    "type": "field",
     "domain": [
      "domain:gemini.google.com",
      "domain:gemini.gstatic.com",
