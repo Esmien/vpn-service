@@ -59,20 +59,15 @@ if OVERRIDE_FILE.exists():
 
 # Only Gemini-specific hosts; shared Google assets cannot be distinguished by app.
 # Add shared hosts only on evidence and with explicit acceptance of their wider impact.
-GOOGLE_API_DOMAINS = [
-    "domain:gemini.google.com",
-    "domain:gemini.gstatic.com",
-    "domain:aistudio.google.com",
-    "domain:generativelanguage.googleapis.com",
-    "domain:alkalimakersuite-pa.clients6.google.com",
-    "domain:geller-pa.googleapis.com",
-    "domain:aisandbox-pa.googleapis.com",
-    "domain:proactivebackend-pa.googleapis.com",
-    "domain:robinfrontend-pa.googleapis.com",
-    "domain:content-push.googleapis.com",
-    "domain:lh3.googleusercontent.com",
-    "domain:encrypted-tbn0.gstatic.com",
-]
+GOOGLE_API_DOMAINS = ["domain:google.com", "domain:googleapis.com", "domain:gstatic.com",
+                      "domain:googleusercontent.com", "domain:withgoogle.com", "domain:google.dev"]
+
+# Heavy media stays off the relay (provider traffic is the expensive part): video and
+# thumbnails go straight out of Estonia, while every Google frontend behind Gemini shares
+# one country with it. Splitting Google across two countries is what made Gemini answer
+# the send with a generic error even though the page itself rendered fine.
+MEDIA_DOMAINS = ["domain:googlevideo.com", "domain:ytimg.com", "domain:ggpht.com",
+                 "domain:gvt1.com", "domain:gvt2.com", "domain:youtube.com"]
 GEMINI_DOMAINS = GOOGLE_API_DOMAINS
 GOOGLE_DOMAINS = GOOGLE_API_DOMAINS
 
@@ -125,6 +120,7 @@ def install(cfg: dict) -> dict:
         # there and the browser hangs on its own timeout. Refusing UDP/443 makes clients
         # fall back to TCP at once; without this rule Gemini web reports a generic error.
         {"type": "field", "network": "udp", "port": 443, "outboundTag": "blocked"},
+        {"type": "field", "domain": MEDIA_DOMAINS, "outboundTag": "direct"},
         {"type": "field", "domain": GOOGLE_DOMAINS, "balancerTag": GOOGLE_GROUP},
         {"type": "field", "domain": ru_domains, "balancerTag": RU_GROUP},
     ]
