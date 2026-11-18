@@ -27,6 +27,7 @@ def probe(item):
     try:p.wait(timeout=3)
     except subprocess.TimeoutExpired:p.kill();p.wait()
  except (ValueError,KeyError,OSError) as e:return i,name,'error '+type(e).__name__
-with concurrent.futures.ThreadPoolExecutor(max_workers=5) as pool: results=list(pool.map(probe,enumerate(links)))
+selected = [(i, link) for i, link in enumerate(links) if len(sys.argv) == 1 or i in {int(x) for x in sys.argv[1:]}]
+with concurrent.futures.ThreadPoolExecutor(max_workers=5) as pool: results=list(pool.map(probe,selected))
 for i,n,res in results:print(f'{i:2} {n}: {res}',flush=True)
 print('TOTAL',len(results),'markers',sum(x[2].startswith('marker=') for x in results))
