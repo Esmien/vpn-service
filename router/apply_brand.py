@@ -165,8 +165,7 @@ def write_stream_map() -> None:
     STREAM_MAP.write_text(
         "map $ssl_preread_server_name $mtproto_backend {\n"
         "    www.cloudflare.com 127.0.0.1:10445;\n"
-        f"    {REALITY_CAMO} 127.0.0.1:{REALITY_PORT + off};\n"
-        f"    vpn.esmien.ru 127.0.0.1:{VISION_PORT + off};\n"
+        f"    edge.esmien.ru 127.0.0.1:{VISION_PORT + off};\n"
         "    default 127.0.0.1:9443;\n"
         "}\n"
     )

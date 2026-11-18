@@ -104,7 +104,7 @@ WS_COMPAT_DEFAULT = True
 
 REALITY_PORT = 4443  # 443 режут у части операторов; nginx stream слушает оба
 VISION_TAG = "🇪🇪 Эстония (Vision)"
-VISION_HOST = HOST  # SNI совпадает с доменом, который реально указывает на наш IP
+VISION_HOST = "edge.esmien.ru"  # SNI совпадает с доменом, который реально указывает на наш IP
 
 
 def vless_reality(uid: str, tag: str = REALITY_TAG, addr: str = IP) -> str | None:
@@ -358,12 +358,14 @@ def build_meta(token_dir: Path, uid: str) -> None:
     ws_link = vless(uid, path, ws_tag)
     extra = _extra_nodes(token_dir)
     v_link = vless_vision(uid)
-    if r_link and not compat:
-        links, names = [r_link, v_link], [REALITY_TAG, VISION_TAG]
-    elif compat:
-        links, names = [r_link, v_link, ws_link], [REALITY_TAG, VISION_TAG, WS_COMPAT_TAG]
-    else:
-        links, names = [ws_link], [META_TAG]
+    # REALITY-вход с камо снят: чужой SNI на нашем IP — подпись подмены, из-за неё
+    # оператор и морозил поток. Остались входы на своём домене.
+    pairs = [(v_link, VISION_TAG)]
+    if compat or not r_link:
+        pairs.append((ws_link, WS_COMPAT_TAG if compat else META_TAG))
+    pairs = [(l, n) for l, n in pairs if l]
+    links = [l for l, n in pairs]
+    names = [n for l, n in pairs]
     links = links + [e["link"] for e in extra if e.get("link")]
     names = names + [e["name"] for e in extra if e.get("name")]
     (token_dir / "list.txt").write_text(
@@ -375,13 +377,9 @@ def build_meta(token_dir: Path, uid: str) -> None:
     # there (UTF-8 shown as mojibake), so the file carries one ASCII marker only. The
     # human-readable copy lives in the `announce` header and on /u/<token>.
     header = "# Esmien VPN"
-    if r_link and not compat:
-        proxies = (clash_proxy_reality(uid) or "") + clash_proxy_vision(uid)
-    elif r_link:
-        proxies = ((clash_proxy_reality(uid) or "") + clash_proxy_vision(uid)
-                   + clash_proxy(uid, WS_COMPAT_TAG, path))
-    else:
-        proxies = clash_proxy(uid, META_TAG, path)
+    proxies = clash_proxy_vision(uid)
+    if compat or not r_link:
+        proxies += clash_proxy(uid, WS_COMPAT_TAG if compat else META_TAG, path)
     proxies += "".join(e.get("clash", "") for e in extra)
     (token_dir / "clash.yaml").write_text(f"""{header}
 mixed-port: 7890
@@ -416,11 +414,11 @@ proxies:
            "transport": {"type": "ws", "path": path, "headers": {"Host": HOST}},
            "tls": {"enabled": True, "server_name": HOST}}
     if r_link and not compat:
-        outs = [sing_reality(uid), sing_vision(uid)]
+        outs = [sing_vision(uid)]
         match_tag = REALITY_TAG
     elif r_link:
         out["tag"] = WS_COMPAT_TAG
-        outs = [sing_reality(uid), sing_vision(uid), out]
+        outs = [sing_vision(uid), out]
         match_tag = REALITY_TAG
     else:
         outs = [out]
