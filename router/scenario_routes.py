@@ -61,7 +61,14 @@ if OVERRIDE_FILE.exists():
 # gstatic) остаётся на эстонском выходе: релеи берегут трафик, а fr периодически
 # рвёт gRPC-поток (RST_STREAM), и пускать через него весь Google — значит гасить
 # весь Google пачками.
-GEMINI_DOMAINS = [
+# Gemini решает, «поддерживается ли страна», по IP конкретного запроса. Если страница
+# приходит из одной страны, а API-вызовы из другой, Google отдаёт «Gemini пока не
+# поддерживается в вашей стране»: ровно это и случилось, когда Gemini ушёл на fr, а
+# остальные google-хосты — в direct (EE). Поэтому все лёгкие google-хосты (страницы,
+# API, auth, статика) ходят через ОДИН релей, а тяжёлое видео (googlevideo/ytimg) —
+# напрямую с эстонского выхода.
+GOOGLE_API_DOMAINS = [
+    # Gemini и его бэкенды
     "domain:gemini.google.com",
     "domain:aistudio.google.com",
     "domain:generativelanguage.googleapis.com",
@@ -71,10 +78,20 @@ GEMINI_DOMAINS = [
     "domain:proactivebackend-pa.googleapis.com",
     "domain:robinfrontend-pa.googleapis.com",
     "domain:content-push.googleapis.com",
-    "domain:lh3.googleusercontent.com",          # картинки, которые отдаёт Gemini
-    "domain:encrypted-tbn0.gstatic.com",         # превью
+    # обвязка, без которой Gemini не считает себя доступным
+    "domain:google.com",
+    "domain:accounts.google.com",
+    "domain:clients6.google.com",
+    "domain:googleapis.com",
+    "domain:gstatic.com",
+    "domain:googleusercontent.com",
+    "domain:withgoogle.com",
+    "domain:google.dev",
+    "domain:youtube.com",
+    "domain:youtu.be",
 ]
-GOOGLE_DOMAINS = GEMINI_DOMAINS  # историческое имя, используется ниже
+GEMINI_DOMAINS = GOOGLE_API_DOMAINS
+GOOGLE_DOMAINS = GOOGLE_API_DOMAINS
 
 # Probe URL must answer from every exit we own: gstatic times out from the RU box,
 # which used to make leastPing treat the RU group as empty and stall .ru traffic.
