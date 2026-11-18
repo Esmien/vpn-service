@@ -19,7 +19,6 @@ done
 chk "bot.esmien.ru (webhook)" '^(200|401|403|404|405)$' --resolve "bot.esmien.ru:443:127.0.0.1" "https://bot.esmien.ru/"
 
 echo "== VPN WS-входы"
-chk "vpn :443 /general" '^(200|400)$' --resolve "$HOST:443:127.0.0.1" "https://$HOST/general"
 chk "vpn :8443 /ws"     '^(200|400)$' --resolve "$HOST:8443:127.0.0.1" "https://$HOST:8443/ws"
 chk "vpn :2087 /ws"     '^(200|400)$' --resolve "$HOST:2087:127.0.0.1" "https://$HOST:2087/ws"
 chk "подписка :8443"    '^200$'       --resolve "$HOST:8443:127.0.0.1" "https://$HOST:8443/sub/$(ls /var/www/esmien-sub | head -1)"
@@ -37,6 +36,14 @@ if [[ -f /root/.secrets/reality.key ]]; then
     echo "  ok   :443 принимает соединения (camo $camo)"
   else echo "  FAIL :443 не слушает"; fails=$((fails+1)); fi
 fi
+
+echo "== палец по IP (unknown SNI должен молчать)"
+code=$(curl -sk -o /dev/null -m 8 -w '%{http_code}' --resolve nosuch.invalid:443:127.0.0.1 https://nosuch.invalid/ 2>/dev/null)
+if [[ "$code" == "000" ]]; then echo "  ok   unknown SNI -> 000 (рукопожатие сброшено)"
+else echo "  FAIL unknown SNI -> $code (наш vhost отвечает)"; fails=$((fails+1)); fi
+hdr=$(curl -skI -m 8 --resolve "ai.esmien.ru:443:127.0.0.1" "https://ai.esmien.ru/" 2>/dev/null | grep -i '^server:' | tr -d '\r')
+if [[ "$hdr" == "server: nginx" ]]; then echo "  ok   версия nginx скрыта"
+else echo "  FAIL $hdr"; fails=$((fails+1)); fi
 
 [[ $fails -eq 0 ]] && echo "итог: всё живо" || echo "итог: провалов $fails"
 exit $(( fails > 0 ))

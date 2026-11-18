@@ -303,12 +303,21 @@ def build_meta(token_dir: Path, uid: str) -> None:
     """
     path = _BRAND["paths"]["general"]
     r_link = vless_reality(uid)
-    ws_tag = WS_COMPAT_TAG if r_link else META_TAG
+    # WS-узел выдаётся только по явному маркеру «compat» в каталоге токена: по умолчанию
+    # подписка несёт один REALITY-узел, а старые WS-входы (2087/8443) остаются живыми,
+    # чтобы уже скачанные профили не отваливались в момент обновления.
+    compat = bool(r_link) and (token_dir / "compat").exists()
+    ws_tag = (WS_COMPAT_TAG if compat else META_TAG)
     ws_link = vless(uid, path, ws_tag)
-    link = r_link or ws_link
     extra = _extra_nodes(token_dir)
-    links = ([r_link, ws_link] if r_link else [ws_link]) + [e["link"] for e in extra if e.get("link")]
-    names = ([REALITY_TAG, WS_COMPAT_TAG] if r_link else [META_TAG]) + [e["name"] for e in extra if e.get("name")]
+    if r_link and not compat:
+        links, names = [r_link], [REALITY_TAG]
+    elif compat:
+        links, names = [r_link, ws_link], [REALITY_TAG, WS_COMPAT_TAG]
+    else:
+        links, names = [ws_link], [META_TAG]
+    links = links + [e["link"] for e in extra if e.get("link")]
+    names = names + [e["name"] for e in extra if e.get("name")]
     (token_dir / "list.txt").write_text(
         base64.b64encode(("\n".join(links) + "\n").encode()).decode() + "\n")
     names_yaml = "".join(f'      - {json.dumps(n, ensure_ascii=False)}\n' for n in names)
@@ -318,7 +327,9 @@ def build_meta(token_dir: Path, uid: str) -> None:
     # there (UTF-8 shown as mojibake), so the file carries one ASCII marker only. The
     # human-readable copy lives in the `announce` header and on /u/<token>.
     header = "# Esmien VPN"
-    if r_link:
+    if r_link and not compat:
+        proxies = clash_proxy_reality(uid) or ""
+    elif r_link:
         proxies = (clash_proxy_reality(uid) or "") + clash_proxy(uid, WS_COMPAT_TAG, path)
     else:
         proxies = clash_proxy(uid, META_TAG, path)
@@ -355,7 +366,10 @@ proxies:
     out = {"type": "vless", "tag": META_TAG, "server": HOST, "server_port": PORT, "uuid": uid,
            "transport": {"type": "ws", "path": path, "headers": {"Host": HOST}},
            "tls": {"enabled": True, "server_name": HOST}}
-    if r_link:
+    if r_link and not compat:
+        outs = [sing_reality(uid)]
+        match_tag = REALITY_TAG
+    elif r_link:
         out["tag"] = WS_COMPAT_TAG
         outs = [sing_reality(uid), out]
         match_tag = REALITY_TAG
