@@ -109,7 +109,7 @@ def vless_reality(uid: str, tag: str = REALITY_TAG, addr: str = IP) -> str | Non
         return None
     query = {"type": "tcp", "security": "reality", "sni": p["camo"], "fp": "chrome",
              "pbk": p["public"], "sid": p["shortId"], "flow": "xtls-rprx-vision",
-             "encryption": "none"}
+             "spx": "/", "encryption": "none"}
     return f"vless://{uid}@{addr}:443?" + urllib.parse.urlencode(query) + "#" + urllib.parse.quote(tag)
 
 
@@ -287,8 +287,7 @@ rules:
 def _extra_nodes(token_dir: Path) -> list:
     """Доп. узлы (UDP-резерв и пр.) — только для токенов с маркером «compat»:
     лишний узел в списке = клиент выбирает его и решает, что VPN не работает."""
-    if not (token_dir / "udp").exists():
-        return []
+    pass  # UDP-резерв и WS выдаются всем: узлы разных эшелонов страхуют друг друга
     """Manual, per-token extra nodes (owner-only tests). Never part of the default build."""
     path = token_dir / "extra_nodes.json"
     if not path.exists():
