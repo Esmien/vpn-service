@@ -57,11 +57,24 @@ if OVERRIDE_FILE.exists():
     except (ValueError, OSError):
         pass
 
-GOOGLE_DOMAINS = ["domain:google.com", "domain:googleapis.com", "domain:gstatic.com",
-                  "domain:googleusercontent.com", "domain:withgoogle.com", "domain:google.dev",
-                  # видео YouTube живёт не на google.com: без этих хостов ролики уходили в direct
-                  "domain:googlevideo.com", "domain:ytimg.com", "domain:ggpht.com",
-                  "domain:gvt1.com", "domain:gvt2.com", "domain:youtube.com", "domain:youtu.be"]
+# ТОЛЬКО Gemini и его обвязка ходят через fr/fi. Остальной Google (поиск, YouTube,
+# gstatic) остаётся на эстонском выходе: релеи берегут трафик, а fr периодически
+# рвёт gRPC-поток (RST_STREAM), и пускать через него весь Google — значит гасить
+# весь Google пачками.
+GEMINI_DOMAINS = [
+    "domain:gemini.google.com",
+    "domain:aistudio.google.com",
+    "domain:generativelanguage.googleapis.com",
+    "domain:alkalimakersuite-pa.clients6.google.com",
+    "domain:geller-pa.googleapis.com",
+    "domain:aisandbox-pa.googleapis.com",
+    "domain:proactivebackend-pa.googleapis.com",
+    "domain:robinfrontend-pa.googleapis.com",
+    "domain:content-push.googleapis.com",
+    "domain:lh3.googleusercontent.com",          # картинки, которые отдаёт Gemini
+    "domain:encrypted-tbn0.gstatic.com",         # превью
+]
+GOOGLE_DOMAINS = GEMINI_DOMAINS  # историческое имя, используется ниже
 
 # Probe URL must answer from every exit we own: gstatic times out from the RU box,
 # which used to make leastPing treat the RU group as empty and stall .ru traffic.
@@ -111,10 +124,9 @@ def install(cfg: dict) -> dict:
         {"type": "field", "domain": GOOGLE_DOMAINS, "balancerTag": GOOGLE_GROUP},
         {"type": "field", "domain": ru_domains, "balancerTag": RU_GROUP},
     ]
-    tail = []
-    if google_ips:
-        tail.append({"type": "field", "ip": google_ips, "balancerTag": GOOGLE_GROUP})
-    tail.append({"type": "field", "network": "tcp,udp", "outboundTag": "fr"})
+    # Всё, что не попало в правила, идёт через эстонский выход (direct), а не через
+    # релей: fr/fi обслуживают только Gemini и .ru-сайты.
+    tail = [{"type": "field", "network": "tcp,udp", "outboundTag": "direct"}]
 
     routing["rules"] = head + inbound_rules + tail
     routing["balancers"] = balancers(GROUPS)
