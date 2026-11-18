@@ -284,6 +284,10 @@ rules:
 
 
 def _extra_nodes(token_dir: Path) -> list:
+    """Доп. узлы (UDP-резерв и пр.) — только для токенов с маркером «compat»:
+    лишний узел в списке = клиент выбирает его и решает, что VPN не работает."""
+    if not (token_dir / "compat").exists():
+        return []
     """Manual, per-token extra nodes (owner-only tests). Never part of the default build."""
     path = token_dir / "extra_nodes.json"
     if not path.exists():
