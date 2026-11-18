@@ -24,7 +24,7 @@ BG_OFFSET = 1000
 # with the active colour (+BG_OFFSET), so the map is regenerated on every flip.
 STREAM_MAP = Path("/etc/nginx/stream.d/443-map.conf")
 REALITY_PORT = 10043
-REALITY_CAMO = "www.microsoft.com"
+REALITY_CAMO = "mts.ru"
 
 
 def _bg_offset() -> int:
