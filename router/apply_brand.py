@@ -24,7 +24,8 @@ BG_OFFSET = 1000
 # with the active colour (+BG_OFFSET), so the map is regenerated on every flip.
 STREAM_MAP = Path("/etc/nginx/stream.d/443-map.conf")
 REALITY_PORT = 10043
-REALITY_CAMO = "mts.ru"
+VISION_PORT = 10055  # VLESS+Vision+TLS на нашем домене (SNI совпадает с IP)
+REALITY_CAMO = "cdn.jsdelivr.net"
 
 
 def _bg_offset() -> int:
@@ -165,6 +166,7 @@ def write_stream_map() -> None:
         "map $ssl_preread_server_name $mtproto_backend {\n"
         "    www.cloudflare.com 127.0.0.1:10445;\n"
         f"    {REALITY_CAMO} 127.0.0.1:{REALITY_PORT + off};\n"
+        f"    vpn.esmien.ru 127.0.0.1:{VISION_PORT + off};\n"
         "    default 127.0.0.1:9443;\n"
         "}\n"
     )

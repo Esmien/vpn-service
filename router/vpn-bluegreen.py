@@ -65,11 +65,27 @@ def path_of(ib: dict) -> str:
     return ib.get("streamSettings", {}).get("wsSettings", {}).get("path", "/")
 
 
+def _xray_data_mount() -> str | None:
+    """Host path of the container's /usr/local/etc/xray — TLS certs for vision-in live there.
+
+    `xray -test` runs in a throwaway container, so without this mount every config with
+    `certificateFile` under /usr/local/etc/xray fails validation as "no such file".
+    """
+    r = subprocess.run(["docker", "inspect", CONTAINERS["a"], "--format",
+                        '{{range .Mounts}}{{if eq .Destination "/usr/local/etc/xray"}}{{.Source}}{{end}}{{end}}'],
+                       capture_output=True, text=True)
+    path = (r.stdout or "").strip()
+    return path or None
+
+
 def validate(path: Path) -> tuple[bool, str]:
-    r = subprocess.run(
-        ["docker", "run", "--rm", "--user", "0:0", "--entrypoint", "/usr/local/bin/xray",
-         "-v", f"{path}:/etc/xray/config.json:ro", IMAGE, "run", "-test", "-c", "/etc/xray/config.json"],
-        capture_output=True, text=True)
+    args = ["docker", "run", "--rm", "--user", "0:0", "--entrypoint", "/usr/local/bin/xray",
+            "-v", f"{path}:/etc/xray/config.json:ro"]
+    data = _xray_data_mount()
+    if data:
+        args += ["-v", f"{data}:/usr/local/etc/xray:ro"]
+    args += [IMAGE, "run", "-test", "-c", "/etc/xray/config.json"]
+    r = subprocess.run(args, capture_output=True, text=True)
     return r.returncode == 0, (r.stdout + r.stderr).strip()[-800:]
 
 
@@ -154,9 +170,11 @@ def probe_direct(color: str, timeout: float = 1.5) -> tuple[int, int]:
     for ib in cfg.get("inbounds", []):
         if ib.get("protocol") == "dokodemo-door":
             continue  # api-инбаунд не говорит по HTTP: пробовать его бессмысленно
-        if (ib.get("streamSettings") or {}).get("security") == "reality":
-            # REALITY speaks its own handshake and just closes a bare HTTP probe,
-            # so health = the TCP port accepts a connection.
+        ss = ib.get("streamSettings") or {}
+        if ss.get("security") == "reality" or (ss.get("security") == "tls" and "wsSettings" not in ss):
+            # REALITY and VLESS+Vision+TLS speak their own handshake and just close a bare
+            # HTTP probe, so health = the TCP port accepts a connection. WS inbounds stay
+            # on the HTTP check: they answer 400 on a plain request.
             total += 1
             try:
                 socket.create_connection(("127.0.0.1", ib["port"]), timeout).close()

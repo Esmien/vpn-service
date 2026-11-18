@@ -103,6 +103,8 @@ WS_COMPAT_DEFAULT = True
 
 
 REALITY_PORT = 4443  # 443 режут у части операторов; nginx stream слушает оба
+VISION_TAG = "🇪🇪 Эстония (Vision)"
+VISION_HOST = HOST  # SNI совпадает с доменом, который реально указывает на наш IP
 
 
 def vless_reality(uid: str, tag: str = REALITY_TAG, addr: str = IP) -> str | None:
@@ -116,6 +118,42 @@ def vless_reality(uid: str, tag: str = REALITY_TAG, addr: str = IP) -> str | Non
     return f"vless://{uid}@{addr}:{REALITY_PORT}?" + urllib.parse.urlencode(query) + "#" + urllib.parse.quote(tag)
 
 
+def vless_vision(uid: str, tag: str = VISION_TAG, addr: str = IP) -> str:
+    """VLESS+Vision+TLS на нашем собственном домене.
+
+    Камо-домен на нашем IP — это несовпадение SNI и адреса, которое ТСПУ ловит первым
+    делом (соединение живёт минуту и замерзает). Здесь SNI `vpn.esmien.ru` действительно
+    указывает на этот IP: придраться не к чему, а Vision скрывает TLS-in-TLS.
+    """
+    query = {"type": "tcp", "security": "tls", "sni": VISION_HOST, "fp": "chrome",
+             "alpn": "h2,http/1.1", "flow": "xtls-rprx-vision", "encryption": "none"}
+    return f"vless://{uid}@{addr}:{REALITY_PORT}?" + urllib.parse.urlencode(query) + "#" + urllib.parse.quote(tag)
+
+
+def clash_proxy_vision(uid: str, name: str = VISION_TAG, addr: str = IP) -> str:
+    return f"""  - name: {json.dumps(name, ensure_ascii=False)}
+    type: vless
+    server: {addr}
+    port: {REALITY_PORT}
+    uuid: {uid}
+    network: tcp
+    tls: true
+    udp: true
+    flow: xtls-rprx-vision
+    servername: {VISION_HOST}
+    client-fingerprint: chrome
+    alpn: [h2, http/1.1]
+"""
+
+
+def sing_vision(uid: str, name: str = VISION_TAG, addr: str = IP) -> dict:
+    return {"type": "vless", "tag": name, "server": addr, "server_port": REALITY_PORT, "uuid": uid,
+            "flow": "xtls-rprx-vision",
+            "tls": {"enabled": True, "server_name": VISION_HOST,
+                    "alpn": ["h2", "http/1.1"],
+                    "utls": {"enabled": True, "fingerprint": "chrome"}}}
+
+
 def clash_proxy_reality(uid: str, name: str = REALITY_TAG, addr: str = IP) -> str | None:
     p = REALITY_SEEN
     if not p:
@@ -123,7 +161,7 @@ def clash_proxy_reality(uid: str, name: str = REALITY_TAG, addr: str = IP) -> st
     return f"""  - name: {json.dumps(name, ensure_ascii=False)}
     type: vless
     server: {addr}
-    port: 443
+    port: {REALITY_PORT}
     uuid: {uid}
     network: tcp
     tls: true
@@ -141,7 +179,7 @@ def sing_reality(uid: str, name: str = REALITY_TAG, addr: str = IP) -> dict | No
     p = REALITY_SEEN
     if not p:
         return None
-    return {"type": "vless", "tag": name, "server": addr, "server_port": 443, "uuid": uid,
+    return {"type": "vless", "tag": name, "server": addr, "server_port": REALITY_PORT, "uuid": uid,
             "flow": "xtls-rprx-vision",
             "tls": {"enabled": True, "server_name": p["camo"],
                     "utls": {"enabled": True, "fingerprint": "chrome"},
@@ -319,10 +357,11 @@ def build_meta(token_dir: Path, uid: str) -> None:
     ws_tag = (WS_COMPAT_TAG if compat else META_TAG)
     ws_link = vless(uid, path, ws_tag)
     extra = _extra_nodes(token_dir)
+    v_link = vless_vision(uid)
     if r_link and not compat:
-        links, names = [r_link], [REALITY_TAG]
+        links, names = [r_link, v_link], [REALITY_TAG, VISION_TAG]
     elif compat:
-        links, names = [r_link, ws_link], [REALITY_TAG, WS_COMPAT_TAG]
+        links, names = [r_link, v_link, ws_link], [REALITY_TAG, VISION_TAG, WS_COMPAT_TAG]
     else:
         links, names = [ws_link], [META_TAG]
     links = links + [e["link"] for e in extra if e.get("link")]
@@ -337,9 +376,10 @@ def build_meta(token_dir: Path, uid: str) -> None:
     # human-readable copy lives in the `announce` header and on /u/<token>.
     header = "# Esmien VPN"
     if r_link and not compat:
-        proxies = clash_proxy_reality(uid) or ""
+        proxies = (clash_proxy_reality(uid) or "") + clash_proxy_vision(uid)
     elif r_link:
-        proxies = (clash_proxy_reality(uid) or "") + clash_proxy(uid, WS_COMPAT_TAG, path)
+        proxies = ((clash_proxy_reality(uid) or "") + clash_proxy_vision(uid)
+                   + clash_proxy(uid, WS_COMPAT_TAG, path))
     else:
         proxies = clash_proxy(uid, META_TAG, path)
     proxies += "".join(e.get("clash", "") for e in extra)
@@ -376,11 +416,11 @@ proxies:
            "transport": {"type": "ws", "path": path, "headers": {"Host": HOST}},
            "tls": {"enabled": True, "server_name": HOST}}
     if r_link and not compat:
-        outs = [sing_reality(uid)]
+        outs = [sing_reality(uid), sing_vision(uid)]
         match_tag = REALITY_TAG
     elif r_link:
         out["tag"] = WS_COMPAT_TAG
-        outs = [sing_reality(uid), out]
+        outs = [sing_reality(uid), sing_vision(uid), out]
         match_tag = REALITY_TAG
     else:
         outs = [out]
