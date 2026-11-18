@@ -102,6 +102,9 @@ WS_COMPAT_TAG = "🇪🇪 Эстония (совместимость)"
 WS_COMPAT_DEFAULT = True
 
 
+REALITY_PORT = 4443  # 443 режут у части операторов; nginx stream слушает оба
+
+
 def vless_reality(uid: str, tag: str = REALITY_TAG, addr: str = IP) -> str | None:
     """REALITY link: address by IP on purpose — no DNS lookup for the ISP to see or poison."""
     p = REALITY_SEEN
@@ -110,7 +113,7 @@ def vless_reality(uid: str, tag: str = REALITY_TAG, addr: str = IP) -> str | Non
     query = {"type": "tcp", "security": "reality", "sni": p["camo"], "fp": "chrome",
              "pbk": p["public"], "sid": p["shortId"], "flow": "xtls-rprx-vision",
              "spx": "/", "encryption": "none"}
-    return f"vless://{uid}@{addr}:443?" + urllib.parse.urlencode(query) + "#" + urllib.parse.quote(tag)
+    return f"vless://{uid}@{addr}:{REALITY_PORT}?" + urllib.parse.urlencode(query) + "#" + urllib.parse.quote(tag)
 
 
 def clash_proxy_reality(uid: str, name: str = REALITY_TAG, addr: str = IP) -> str | None:

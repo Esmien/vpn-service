@@ -1,0 +1,48 @@
+listen: :8443
+tls:
+  cert: /etc/letsencrypt/live/esmien-wildcard/fullchain.pem
+  key: /etc/letsencrypt/live/esmien-wildcard/privkey.pem
+
+auth:
+  type: userpass
+  userpass:
+    natasha: "<password>"
+    yulya: "<password>"
+    valera: "<password>"
+    olya: "<password>"
+    igor: "<password>"
+    dasha: "<password>"
+    vladislav: "<password>"
+    anton: "<password>"
+
+obfs:
+  type: salamander
+  salamander:
+    password: "<password>"
+
+masquerade:
+  type: proxy
+  proxy:
+    url: http://127.0.0.1
+    rewriteHost: true
+
+quic:
+  initStreamReceiveWindow: 8388608
+  maxStreamReceiveWindow: 8388608
+  initConnReceiveWindow: 20971520
+  maxConnReceiveWindow: 20971520
+
+bandwidth:
+  up: 200 mbps
+  down: 500 mbps
+
+ignoreClientBandwidth: false
+disableUDP: false
+udpIdleTimeout: 60s
+
+outbounds:
+  - name: xray
+    type: socks5
+    socks5:
+      addr: 127.0.0.1:10809
+      udp: true
