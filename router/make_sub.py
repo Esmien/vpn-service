@@ -82,6 +82,69 @@ def vless(uid: str, path: str, tag: str, addr: str = HOST) -> str:
     return f"vless://{uid}@{addr}:{PORT}?" + urllib.parse.urlencode(query) + "#" + urllib.parse.quote(tag)
 
 
+# --- REALITY (XTLS-Vision) ------------------------------------------------
+# Keys live outside git; if the file is missing (fresh checkout) the node is simply
+# not emitted, so subscriptions keep working on the old WS entry.
+REALITY_FILE = Path("/root/.secrets/reality.key")
+
+
+def reality_params() -> dict | None:
+    try:
+        kv = dict(line.split("=", 1) for line in REALITY_FILE.read_text().split() if "=" in line)
+        return {k: v.strip() for k, v in kv.items()}
+    except FileNotFoundError:
+        return None
+
+
+REALITY_SEEN = reality_params()
+REALITY_TAG = "🇪🇪 Эстония (все сервисы)"
+WS_COMPAT_TAG = "🇪🇪 Эстония (совместимость)"
+
+
+def vless_reality(uid: str, tag: str = REALITY_TAG, addr: str = IP) -> str | None:
+    """REALITY link: address by IP on purpose — no DNS lookup for the ISP to see or poison."""
+    p = REALITY_SEEN
+    if not p:
+        return None
+    query = {"type": "tcp", "security": "reality", "sni": p["camo"], "fp": "chrome",
+             "pbk": p["public"], "sid": p["shortId"], "flow": "xtls-rprx-vision",
+             "encryption": "none"}
+    return f"vless://{uid}@{addr}:443?" + urllib.parse.urlencode(query) + "#" + urllib.parse.quote(tag)
+
+
+def clash_proxy_reality(uid: str, name: str = REALITY_TAG, addr: str = IP) -> str | None:
+    p = REALITY_SEEN
+    if not p:
+        return None
+    return f"""  - name: {json.dumps(name, ensure_ascii=False)}
+    type: vless
+    server: {addr}
+    port: 443
+    uuid: {uid}
+    network: tcp
+    tls: true
+    udp: true
+    flow: xtls-rprx-vision
+    servername: {p['camo']}
+    client-fingerprint: chrome
+    reality-opts:
+      public-key: {p['public']}
+      short-id: {p['shortId']}
+"""
+
+
+def sing_reality(uid: str, name: str = REALITY_TAG, addr: str = IP) -> dict | None:
+    p = REALITY_SEEN
+    if not p:
+        return None
+    return {"type": "vless", "tag": name, "server": addr, "server_port": 443, "uuid": uid,
+            "flow": "xtls-rprx-vision",
+            "tls": {"enabled": True, "server_name": p["camo"],
+                    "utls": {"enabled": True, "fingerprint": "chrome"},
+                    "reality": {"enabled": True, "public_key": p["public"],
+                                "short_id": p["shortId"]}}}
+
+
 def clash_proxy(uid: str, name: str, path: str, addr: str = HOST) -> str:
     return f"""  - name: {json.dumps(name, ensure_ascii=False)}
     type: vless
@@ -233,12 +296,19 @@ def _extra_nodes(token_dir: Path) -> list:
 
 
 def build_meta(token_dir: Path, uid: str) -> None:
-    """One visible node. Every scenario is decided by the server, not by the client."""
+    """One visible node. Every scenario is decided by the server, not by the client.
+
+    REALITY (443, XTLS-Vision) is the primary entry; the old WS node stays next to it
+    as «совместимость» until every client is known to speak REALITY.
+    """
     path = _BRAND["paths"]["general"]
-    link = vless(uid, path, META_TAG)
+    r_link = vless_reality(uid)
+    ws_tag = WS_COMPAT_TAG if r_link else META_TAG
+    ws_link = vless(uid, path, ws_tag)
+    link = r_link or ws_link
     extra = _extra_nodes(token_dir)
-    links = [link] + [e["link"] for e in extra if e.get("link")]
-    names = [META_TAG] + [e["name"] for e in extra if e.get("name")]
+    links = ([r_link, ws_link] if r_link else [ws_link]) + [e["link"] for e in extra if e.get("link")]
+    names = ([REALITY_TAG, WS_COMPAT_TAG] if r_link else [META_TAG]) + [e["name"] for e in extra if e.get("name")]
     (token_dir / "list.txt").write_text(
         base64.b64encode(("\n".join(links) + "\n").encode()).decode() + "\n")
     names_yaml = "".join(f'      - {json.dumps(n, ensure_ascii=False)}\n' for n in names)
@@ -248,7 +318,11 @@ def build_meta(token_dir: Path, uid: str) -> None:
     # there (UTF-8 shown as mojibake), so the file carries one ASCII marker only. The
     # human-readable copy lives in the `announce` header and on /u/<token>.
     header = "# Esmien VPN"
-    proxies = clash_proxy(uid, META_TAG, path) + "".join(e.get("clash", "") for e in extra)
+    if r_link:
+        proxies = (clash_proxy_reality(uid) or "") + clash_proxy(uid, WS_COMPAT_TAG, path)
+    else:
+        proxies = clash_proxy(uid, META_TAG, path)
+    proxies += "".join(e.get("clash", "") for e in extra)
     (token_dir / "clash.yaml").write_text(f"""{header}
 mixed-port: 7890
 allow-lan: false
@@ -281,12 +355,19 @@ proxies:
     out = {"type": "vless", "tag": META_TAG, "server": HOST, "server_port": PORT, "uuid": uid,
            "transport": {"type": "ws", "path": path, "headers": {"Host": HOST}},
            "tls": {"enabled": True, "server_name": HOST}}
+    if r_link:
+        out["tag"] = WS_COMPAT_TAG
+        outs = [sing_reality(uid), out]
+        match_tag = REALITY_TAG
+    else:
+        outs = [out]
+        match_tag = META_TAG
     sing = {"log": {"level": "warn"},
             "inbounds": [{"type": "mixed", "tag": "mixed-in", "listen": "127.0.0.1",
                           "listen_port": 2080}],
-            "outbounds": [out] + [e["sing"] for e in extra if e.get("sing")]
+            "outbounds": [o for o in outs if o] + [e["sing"] for e in extra if e.get("sing")]
                          + [{"type": "direct", "tag": "direct"}],
-            "route": {"rules": [{"domain_suffix": [".esmien.ru"], "outbound": "direct"}, {"outbound": META_TAG}]}}
+            "route": {"rules": [{"domain_suffix": [".esmien.ru"], "outbound": "direct"}, {"outbound": match_tag}]}}
     (token_dir / "singbox.json").write_text(json.dumps(sing, indent=2, ensure_ascii=False),
                                             encoding="utf-8")
     token_dir.chmod(0o755)

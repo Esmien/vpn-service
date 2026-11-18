@@ -20,6 +20,12 @@ PORTS = (CONF["port"], CONF["alt_port"])
 BG_COLOR = Path("/root/vpn-router/vpn-color")
 BG_OFFSET = 1000
 
+# :443 SNI routing (nginx stream). REALITY lives behind the camo SNI; the port moves
+# with the active colour (+BG_OFFSET), so the map is regenerated on every flip.
+STREAM_MAP = Path("/etc/nginx/stream.d/443-map.conf")
+REALITY_PORT = 10043
+REALITY_CAMO = "www.microsoft.com"
+
 
 def _bg_offset() -> int:
     """Active color decides which port block nginx proxies to (see vpn-bluegreen.py)."""
@@ -146,6 +152,25 @@ def write_announce_map() -> None:
     print("written 00-esmien-sub-announce.conf:", [t for t, v in entries.items() if v])
 
 
+def write_stream_map() -> None:
+    """SNI routing for :443 lives in its own file so a blue/green flip can rewrite it.
+
+    Reality is the only backend that must NOT get a PROXY-protocol preface… it actually
+    does want it (acceptProxyProtocol), so the single 443 server keeps `proxy_protocol on`
+    for every backend and the camo SNI simply points at the active colour.
+    """
+    STREAM_MAP.parent.mkdir(exist_ok=True)
+    off = _bg_offset()
+    STREAM_MAP.write_text(
+        "map $ssl_preread_server_name $mtproto_backend {\n"
+        "    www.cloudflare.com 127.0.0.1:10445;\n"
+        f"    {REALITY_CAMO} 127.0.0.1:{REALITY_PORT + off};\n"
+        "    default 127.0.0.1:9443;\n"
+        "}\n"
+    )
+    print(f"written {STREAM_MAP} ({REALITY_CAMO} -> 127.0.0.1:{REALITY_PORT + off})")
+
+
 def main() -> int:
     # Subscriptions are rendered first: the title/announce maps below are built from the
     # token dirs these renders leave behind, and building them from a stale dir ships the
@@ -163,6 +188,7 @@ def main() -> int:
         compat_path.unlink()
         print(f"removed {compat_path}")
     subprocess.run(["python3", str(BASE / "make_pages.py")], check=False)
+    write_stream_map()
     print("done: nginx -t && systemctl reload nginx")
     return 0
 

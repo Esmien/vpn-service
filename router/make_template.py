@@ -12,7 +12,7 @@ from pathlib import Path
 
 SRC = Path(sys.argv[1] if len(sys.argv) > 1 else "/root/vpn-router/config.json")
 DST = Path(sys.argv[2] if len(sys.argv) > 2 else "/root/vpn-service/router/config.template.json")
-KEEP_IN = {"ws-in", "in-general", "in-france", "in-test", "in-fi"}
+KEEP_IN = {"ws-in", "in-general", "in-france", "in-test", "in-fi", "reality-in"}
 KEEP_OUT = {"fr", "fi", "p15", "p17", "direct", "blocked"}
 
 
@@ -20,7 +20,8 @@ def mask(obj):
     if isinstance(obj, dict):
         return {k: ("<VLESS_UUID>" if k == "id" else
                     "<PASSWORD>" if k == "password" else
-                    "<RELAY_PASSWORD>" if k == "privateKey" else mask(v))
+                    "<RELAY_PASSWORD>" if k == "privateKey" else
+                    ["<REALITY_SHORT_ID>"] if k == "shortIds" else mask(v))
                 for k, v in obj.items()}
     if isinstance(obj, list):
         return [mask(x) for x in obj]

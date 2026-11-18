@@ -23,6 +23,7 @@ stopped accepting traffic.
 """
 import hashlib
 import json
+import socket
 import subprocess
 import sys
 from pathlib import Path
@@ -153,6 +154,16 @@ def probe_direct(color: str, timeout: float = 1.5) -> tuple[int, int]:
     for ib in cfg.get("inbounds", []):
         if ib.get("protocol") == "dokodemo-door":
             continue  # api-инбаунд не говорит по HTTP: пробовать его бессмысленно
+        if (ib.get("streamSettings") or {}).get("security") == "reality":
+            # REALITY speaks its own handshake and just closes a bare HTTP probe,
+            # so health = the TCP port accepts a connection.
+            total += 1
+            try:
+                socket.create_connection(("127.0.0.1", ib["port"]), timeout).close()
+                good += 1
+            except OSError:
+                pass
+            continue
         total += 1
         url = f"http://127.0.0.1:{ib['port']}{path_of(ib)}"
         r = subprocess.run(["curl", "-sS", "-m", str(timeout), "-o", "/dev/null",

@@ -5,10 +5,10 @@ stream {
     
     # accepts PROXY and forwards plain TCP to mtproto (it does not speak PROXY)
     server { listen 127.0.0.1:10445 proxy_protocol; proxy_pass 127.0.0.1:10443; }
-    map $ssl_preread_server_name $mtproto_backend {
-        www.cloudflare.com 127.0.0.1:10445;
-        default 127.0.0.1:9443;
-    }
+    # SNI-маршрутизация :443 живёт в отдельном файле: apply_brand.py перегенерирует его
+    # при каждом blue/green flip, подставляя порт активного цвета для REALITY.
+    #   www.microsoft.com -> 127.0.0.1:10043 (цвет a) / :11043 (цвет b)  — REALITY+Vision
+    include /etc/nginx/stream.d/443-map.conf;
     server {
         listen 443;
         listen [::]:443;

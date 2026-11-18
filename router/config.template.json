@@ -130,6 +130,90 @@
      "courier.push.apple.com"
     ]
    }
+  },
+  {
+   "tag": "reality-in",
+   "listen": "127.0.0.1",
+   "port": 10043,
+   "protocol": "vless",
+   "settings": {
+    "clients": [
+     {
+      "id": "<VLESS_UUID>",
+      "flow": "xtls-rprx-vision",
+      "email": "ws-user"
+     },
+     {
+      "id": "<VLESS_UUID>",
+      "flow": "xtls-rprx-vision",
+      "email": "ws-in:Наташа"
+     },
+     {
+      "id": "<VLESS_UUID>",
+      "flow": "xtls-rprx-vision",
+      "email": "ws-in:Юля"
+     },
+     {
+      "id": "<VLESS_UUID>",
+      "flow": "xtls-rprx-vision",
+      "email": "ws-in:Валера"
+     },
+     {
+      "id": "<VLESS_UUID>",
+      "flow": "xtls-rprx-vision",
+      "email": "ws-in:Оля"
+     },
+     {
+      "id": "<VLESS_UUID>",
+      "flow": "xtls-rprx-vision",
+      "email": "ws-in:Игорь"
+     },
+     {
+      "id": "<VLESS_UUID>",
+      "flow": "xtls-rprx-vision",
+      "email": "ws-in:Даша"
+     },
+     {
+      "id": "<VLESS_UUID>",
+      "flow": "xtls-rprx-vision",
+      "email": "ws-in:Владислав"
+     },
+     {
+      "id": "<VLESS_UUID>",
+      "flow": "xtls-rprx-vision",
+      "email": "ws-in:Антон"
+     }
+    ],
+    "decryption": "none"
+   },
+   "streamSettings": {
+    "network": "tcp",
+    "security": "reality",
+    "sockopt": {
+     "acceptProxyProtocol": true
+    },
+    "realitySettings": {
+     "show": false,
+     "dest": "www.microsoft.com:443",
+     "xver": 0,
+     "serverNames": [
+      "www.microsoft.com"
+     ],
+     "privateKey": "<RELAY_PASSWORD>",
+     "shortIds": [
+      "<REALITY_SHORT_ID>"
+     ]
+    }
+   },
+   "sniffing": {
+    "enabled": true,
+    "destOverride": [
+     "http",
+     "tls",
+     "quic"
+    ],
+    "routeOnly": true
+   }
   }
  ],
  "outbounds": [
@@ -350,7 +434,6 @@
    {
     "tag": "bal-ru",
     "selector": [
-     "p15",
      "p17"
     ],
     "strategy": {
