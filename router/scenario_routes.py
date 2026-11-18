@@ -21,9 +21,8 @@ GOOGLE_GROUP = "bal-google"
 RU_GROUP = "bal-ru"
 
 GROUPS = {
-    # Google: France is primary, Finland only takes over when France is dead
-    # (both pass the Gemini geo verdict, but France is the one we sell).
-    GOOGLE_GROUP: ["fi", "fr"],  # fi первым: у fr периодически разваливается gRPC-канал
+    # Pin Gemini to FR; no automatic FI/direct fallback until verified.
+    GOOGLE_GROUP: ["fr"],
     RU_GROUP: ["p15", "p17"],
 }
 
@@ -32,11 +31,11 @@ GROUPS = {
 # keeps the group alive, and xray does it himself in ~30–60 s (probeInterval), without
 # rewriting configs or restarting a container. This is the real fallback; the watchdog
 # only writes a draft and no longer applies anything.
-FALLBACK = {GOOGLE_GROUP: "fi", RU_GROUP: "direct"}
+FALLBACK = {GOOGLE_GROUP: "blocked", RU_GROUP: "direct"}
 
 # Ordered preference used by the watchdog when it prunes/restores a group.
 PREFERENCE = {
-    GOOGLE_GROUP: ["fr", "fi", "direct"],
+    GOOGLE_GROUP: ["fr"],
     RU_GROUP: ["p15", "p17", "direct"],
 }
 
@@ -57,18 +56,9 @@ if OVERRIDE_FILE.exists():
     except (ValueError, OSError):
         pass
 
-# ТОЛЬКО Gemini и его обвязка ходят через fr/fi. Остальной Google (поиск, YouTube,
-# gstatic) остаётся на эстонском выходе: релеи берегут трафик, а fr периодически
-# рвёт gRPC-поток (RST_STREAM), и пускать через него весь Google — значит гасить
-# весь Google пачками.
-# Gemini решает, «поддерживается ли страна», по IP конкретного запроса. Если страница
-# приходит из одной страны, а API-вызовы из другой, Google отдаёт «Gemini пока не
-# поддерживается в вашей стране»: ровно это и случилось, когда Gemini ушёл на fr, а
-# остальные google-хосты — в direct (EE). Поэтому все лёгкие google-хосты (страницы,
-# API, auth, статика) ходят через ОДИН релей, а тяжёлое видео (googlevideo/ytimg) —
-# напрямую с эстонского выхода.
+# Only Gemini-specific hosts; shared Google assets cannot be distinguished by app.
+# Add shared hosts only on evidence and with explicit acceptance of their wider impact.
 GOOGLE_API_DOMAINS = [
-    # Gemini и его бэкенды
     "domain:gemini.google.com",
     "domain:aistudio.google.com",
     "domain:generativelanguage.googleapis.com",
@@ -78,17 +68,8 @@ GOOGLE_API_DOMAINS = [
     "domain:proactivebackend-pa.googleapis.com",
     "domain:robinfrontend-pa.googleapis.com",
     "domain:content-push.googleapis.com",
-    # обвязка, без которой Gemini не считает себя доступным
-    "domain:google.com",
-    "domain:accounts.google.com",
-    "domain:clients6.google.com",
-    "domain:googleapis.com",
-    "domain:gstatic.com",
-    "domain:googleusercontent.com",
-    "domain:withgoogle.com",
-    "domain:google.dev",
-    "domain:youtube.com",
-    "domain:youtu.be",
+    "domain:lh3.googleusercontent.com",
+    "domain:encrypted-tbn0.gstatic.com",
 ]
 GEMINI_DOMAINS = GOOGLE_API_DOMAINS
 GOOGLE_DOMAINS = GOOGLE_API_DOMAINS

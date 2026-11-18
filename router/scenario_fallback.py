@@ -243,7 +243,7 @@ def main() -> int:
         pref = [t for t in PREFERENCE[group] if t != "direct"]
         live = [t for t in pref if effective.get(t)]
         if not live:
-            wanted[group] = ["direct"]
+            wanted[group] = ["fr"] if group == "bal-google" else ["direct"]
         elif group in SINGLE:
             wanted[group] = [live[0]]
         else:

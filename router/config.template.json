@@ -286,16 +286,8 @@
      "domain:proactivebackend-pa.googleapis.com",
      "domain:robinfrontend-pa.googleapis.com",
      "domain:content-push.googleapis.com",
-     "domain:google.com",
-     "domain:accounts.google.com",
-     "domain:clients6.google.com",
-     "domain:googleapis.com",
-     "domain:gstatic.com",
-     "domain:googleusercontent.com",
-     "domain:withgoogle.com",
-     "domain:google.dev",
-     "domain:youtube.com",
-     "domain:youtu.be"
+     "domain:lh3.googleusercontent.com",
+     "domain:encrypted-tbn0.gstatic.com"
     ],
     "balancerTag": "bal-google"
    },
@@ -333,7 +325,7 @@
     "strategy": {
      "type": "leastPing"
     },
-    "fallbackTag": "fi"
+    "fallbackTag": "blocked"
    },
    {
     "tag": "bal-ru",
@@ -350,7 +342,6 @@
  },
  "observatory": {
   "subjectSelector": [
-   "fi",
    "fr",
    "p15",
    "p17"
