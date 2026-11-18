@@ -282,7 +282,14 @@
      "domain:gstatic.com",
      "domain:googleusercontent.com",
      "domain:withgoogle.com",
-     "domain:google.dev"
+     "domain:google.dev",
+     "domain:googlevideo.com",
+     "domain:ytimg.com",
+     "domain:ggpht.com",
+     "domain:gvt1.com",
+     "domain:gvt2.com",
+     "domain:youtube.com",
+     "domain:youtu.be"
     ],
     "balancerTag": "bal-google"
    },
@@ -333,15 +340,15 @@
    {
     "type": "field",
     "network": "tcp,udp",
-    "outboundTag": "direct"
+    "outboundTag": "fr"
    }
   ],
   "balancers": [
    {
     "tag": "bal-google",
     "selector": [
-     "fr",
-     "fi"
+     "fi",
+     "fr"
     ],
     "strategy": {
      "type": "leastPing"

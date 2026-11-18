@@ -23,7 +23,7 @@ RU_GROUP = "bal-ru"
 GROUPS = {
     # Google: France is primary, Finland only takes over when France is dead
     # (both pass the Gemini geo verdict, but France is the one we sell).
-    GOOGLE_GROUP: ["fr"],
+    GOOGLE_GROUP: ["fi", "fr"],  # fi первым: у fr периодически разваливается gRPC-канал
     RU_GROUP: ["p15", "p17"],
 }
 
@@ -58,7 +58,10 @@ if OVERRIDE_FILE.exists():
         pass
 
 GOOGLE_DOMAINS = ["domain:google.com", "domain:googleapis.com", "domain:gstatic.com",
-                  "domain:googleusercontent.com", "domain:withgoogle.com", "domain:google.dev"]
+                  "domain:googleusercontent.com", "domain:withgoogle.com", "domain:google.dev",
+                  # видео YouTube живёт не на google.com: без этих хостов ролики уходили в direct
+                  "domain:googlevideo.com", "domain:ytimg.com", "domain:ggpht.com",
+                  "domain:gvt1.com", "domain:gvt2.com", "domain:youtube.com", "domain:youtu.be"]
 
 # Probe URL must answer from every exit we own: gstatic times out from the RU box,
 # which used to make leastPing treat the RU group as empty and stall .ru traffic.
