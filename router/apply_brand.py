@@ -164,7 +164,6 @@ def write_stream_map() -> None:
     off = _bg_offset()
     STREAM_MAP.write_text(
         "map $ssl_preread_server_name $mtproto_backend {\n"
-        "    www.cloudflare.com 127.0.0.1:10445;\n"
         f"    edge.esmien.ru 127.0.0.1:{VISION_PORT + off};\n"
         "    default 127.0.0.1:9443;\n"
         "}\n"

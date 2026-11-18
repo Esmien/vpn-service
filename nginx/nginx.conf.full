@@ -84,8 +84,6 @@ stream {
     log_format sni '$remote_addr [$time_local] port=$server_port sni=$ssl_preread_server_name bytes_in=$bytes_received bytes_out=$bytes_sent time=$session_time';
     access_log /var/log/nginx/stream-443.log sni;
     
-    # accepts PROXY and forwards plain TCP to mtproto (it does not speak PROXY)
-    server { listen 127.0.0.1:10445 proxy_protocol; proxy_pass 127.0.0.1:10443; }
     include /etc/nginx/stream.d/443-map.conf;
     server {
         listen 443;
