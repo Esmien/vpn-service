@@ -162,7 +162,6 @@
    }
   },
   {
-   "tag": "fr",
    "protocol": "trojan",
    "settings": {
     "servers": [
@@ -187,7 +186,8 @@
      "serviceName": "cd1d722dgrpc",
      "multiMode": false
     }
-   }
+   },
+   "tag": "fr"
   },
   {
    "protocol": "trojan",
@@ -278,6 +278,7 @@
     "type": "field",
     "domain": [
      "domain:gemini.google.com",
+     "domain:gemini.gstatic.com",
      "domain:aistudio.google.com",
      "domain:generativelanguage.googleapis.com",
      "domain:alkalimakersuite-pa.clients6.google.com",

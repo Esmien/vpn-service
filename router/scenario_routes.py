@@ -60,6 +60,7 @@ if OVERRIDE_FILE.exists():
 # Add shared hosts only on evidence and with explicit acceptance of their wider impact.
 GOOGLE_API_DOMAINS = [
     "domain:gemini.google.com",
+    "domain:gemini.gstatic.com",
     "domain:aistudio.google.com",
     "domain:generativelanguage.googleapis.com",
     "domain:alkalimakersuite-pa.clients6.google.com",
