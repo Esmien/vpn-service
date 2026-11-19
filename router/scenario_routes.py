@@ -32,7 +32,7 @@ GROUPS = {
 # keeps the group alive, and xray does it himself in ~30–60 s (probeInterval), without
 # rewriting configs or restarting a container. This is the real fallback; the watchdog
 # only writes a draft and no longer applies anything.
-FALLBACK = {GOOGLE_GROUP: "blocked", RU_GROUP: "direct"}
+FALLBACK = {GOOGLE_GROUP: "fi", RU_GROUP: "direct"}
 
 # Ordered preference used by the watchdog when it prunes/restores a group.
 PREFERENCE = {

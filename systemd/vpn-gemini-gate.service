@@ -1,0 +1,10 @@
+[Unit]
+Description=Gemini gate watchdog (NL-адрес -> релей при заглушке)
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /root/vpn-router/gemini_gate.py
+Nice=10
+TimeoutStartSec=600

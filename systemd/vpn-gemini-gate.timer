@@ -1,0 +1,11 @@
+[Unit]
+Description=Run the Gemini gate watchdog every 2-3h with jitter
+
+[Timer]
+OnBootSec=10min
+OnUnitActiveSec=150min
+RandomizedDelaySec=600
+AccuracySec=1min
+
+[Install]
+WantedBy=timers.target

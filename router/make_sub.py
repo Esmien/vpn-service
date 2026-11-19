@@ -37,7 +37,7 @@ WHITE_GROUP = "🛡 Белые списки (LTE)"
 # Сценарии (Google -> FR/FI, YouTube -> AL, RU -> Москва) живут на сервере,
 # в выдаче их нет: лишний узел в списке = чужой трафик через провайдерскую
 # подписку и риск бана, а не удобство.
-META_TAG = "🇪🇪 Эстония (все сервисы)"
+META_TAG = "🇪🇪 Эстония (основной)"
 
 META_ANNOUNCE = (
     "🇪🇪 Эстония — всё внутри: 🤖 Gemini, 🇷🇺 RU-сайты без выключения VPN, "
@@ -98,7 +98,7 @@ def reality_params() -> dict | None:
 
 REALITY_SEEN = reality_params()
 REALITY_TAG = "🇪🇪 Эстония (все сервисы)"
-WS_COMPAT_TAG = "🇪🇪 Эстония (совместимость)"
+WS_COMPAT_TAG = "🇪🇪 Эстония (основной)"
 WS_COMPAT_DEFAULT = True
 
 

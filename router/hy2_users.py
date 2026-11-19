@@ -28,7 +28,7 @@ HY_CFG = Path("/etc/hysteria/config.yaml")
 STATE = Path("/root/.secrets/hysteria-users.json")
 HOST = "vpn.esmien.ru"
 PORT = 443
-NODE = "🇪🇪 Эстония (UDP резерв)"
+NODE = "🇪🇪 Эстония (запасной)"
 
 TRANSLIT = {
     "Владислав": "vladislav", "Игорь": "igor", "Оля": "olya", "Антон": "anton",
@@ -122,8 +122,17 @@ def main() -> int:
         pw = state[user]["password"]
         node = {"name": NODE, "link": link_for(pw, obfs, user),
                 "clash": clash_for(pw, obfs, user)}
-        (d / "extra_nodes.json").write_text(
-            json.dumps([node], ensure_ascii=False, indent=1))
+        # Чужие доп. узлы (владельцу выдаются вручную: FR/NL для Gemini) не затираем:
+        # пересборка UDP-узла не должна сносить то, что добавлено не ей.
+        keep = []
+        ep = d / "extra_nodes.json"
+        if ep.exists():
+            try:
+                keep = [e for e in json.loads(ep.read_text())
+                        if isinstance(e, dict) and not str(e.get("link", "")).startswith("hysteria2://")]
+            except (ValueError, OSError):
+                keep = []
+        ep.write_text(json.dumps([node] + keep, ensure_ascii=False, indent=1))
         print(f"{name:12s} {token}  -> {user}")
 
     if "--apply" in sys.argv:
