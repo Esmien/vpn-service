@@ -117,9 +117,11 @@ LOCATION = """    location {path} {{
 
 
 def render(port: int, host: str = HOST, cert: str = CERT) -> str:
+    # Retire the two owner-only public entries without changing Xray routing.
+    retired = {CONF["paths"].get("france"), CONF["paths"].get("gemini")}
     locations = "\n".join(
         (PANEL_LOCATION if path == "/panel/" else LOCATION).format(path=path, upstream=up)
-        for path, up in UPSTREAMS)
+        for path, up in UPSTREAMS if path not in retired)
     logname = str(port) if host == HOST else f"{port}-{host.split('.')[0]}"
     return TEMPLATE.format(edge=EDGE_IP or "*", port=port, host=host, cert=cert, logname=logname, locations=locations.rstrip("\n"))
 
