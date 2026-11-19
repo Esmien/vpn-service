@@ -177,7 +177,7 @@
     "network": "ws",
     "security": "none",
     "wsSettings": {
-     "path": "/test"
+     "path": "/gemini"
     }
    },
    "sniffing": {
@@ -467,7 +467,7 @@
      "domain:withgoogle.com",
      "domain:google.dev"
     ],
-    "balancerTag": "bal-google"
+    "outboundTag": "nl"
    },
    {
     "type": "field",

@@ -27,7 +27,7 @@ SUBS = Path("/var/www/esmien-sub")
 HY_CFG = Path("/etc/hysteria/config.yaml")
 STATE = Path("/root/.secrets/hysteria-users.json")
 HOST = "vpn.esmien.ru"
-PORT = 443
+PORT = 8443
 NODE = "🇪🇪 Эстония (запасной)"
 
 TRANSLIT = {
