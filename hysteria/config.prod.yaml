@@ -1,4 +1,4 @@
-listen: :8443
+listen: 85.92.158.238:8443
 tls:
   cert: /etc/letsencrypt/live/esmien-wildcard/fullchain.pem
   key: /etc/letsencrypt/live/esmien-wildcard/privkey.pem
