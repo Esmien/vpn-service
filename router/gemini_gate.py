@@ -1,24 +1,28 @@
 #!/usr/bin/env python3
-"""Сторож NL-гейта: держит Google/Gemini на нашем втором адресе, падает на релей.
+"""Сторож NL-гейта: следит, чтобы узел «Нидерланды (Gemini)» не молчал.
 
-Раз в ~2.5 часа (таймер с джиттером) смотрит, какую страну Google отдаёт адресу
-85.92.158.226:
-  * страница живая и cc не из списка заблокированных  -> гейт здоров;
-  * заглушка / ошибка / пустая страница               -> глобальное Google-правило
-    переводится на bal-google (релей), клиенты продолжают работать.
-Возврат на nl — только после RETURN_OK подряд здоровых проверок (без дребезга).
+Gemini всегда отвечает 200 и непустой страницей, поэтому «жив/мёртв» здесь ничего не
+значит. Разница между рабочим и заглушечным ответом — код страны, который Google вшивает
+в `this.gbar_`: эстонский адрес даёт `ru`/`RUS`, NL-адрес — `nl`/`NLD`. Сторож тянет
+страницу **с привязкой к NL-адресу** (`curl --interface`) и смотрит ровно этот маркер.
 
-    gemini_gate.py             # обычный прогон (таймер)
-    gemini_gate.py --dry-run   # показать решение, ничего не менять
-    gemini_gate.py --pretend-cc=ru   # проверить логику переключения вручную
+  * маркер `NLD` (или любая страна вне списка) -> гейт здоров;
+  * `RUS`/`BLR`/... либо маркера нет           -> правило узла in-test переводится на
+    релей (bal-google), владельцу уходит сообщение;
+  * возврат на NL — после RETURN_OK здоровых проверок подряд (без дребезга).
+
+Глобальное Google-правило сторож не трогает: основной узел и остальные клиенты ходят
+через релей как раньше, NL живёт только в выделенном узле владельца.
+
+    gemini_gate.py                  # обычный прогон (таймер)
+    gemini_gate.py --dry-run        # показать решение, ничего не менять
+    gemini_gate.py --pretend-stub   # проверить логику переключения без поломки
 """
 import fcntl
 import json
-import random
 import re
 import subprocess
 import sys
-import time
 import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
@@ -32,12 +36,14 @@ ENV_FILE = Path("/home/ai_service/notifications/.env")
 NL_IP = "85.92.158.226"
 NL_TAG = "nl"
 FALLBACK_TAG = "bal-google"
-RETURN_OK = 2                      # столько здоровых проверок подряд, чтобы вернуться
-BLOCKED_CC = {"ru", "by", "ir", "kp", "sy", "cu", "cn", "mm", "sd", "tm", "ve", "af"}
+TARGET_INBOUND = "in-test"          # узел «Нидерланды (Gemini)»
+RETURN_OK = 2                       # столько здоровых проверок подряд, чтобы вернуться
+BLOCKED3 = {"RUS", "BLR", "IRN", "PRK", "SYR", "CUB", "CHN", "MMR", "SDN", "TKM", "VEN", "AFG"}
+BLOCKED2 = {"ru", "by", "ir", "kp", "sy", "cu", "cn", "mm", "sd", "tm", "ve", "af"}
 UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36")
 CC_RE = re.compile(r'this\.gbar_=\{CONFIG:\[\[\[0,"www\.gstatic\.com","[^"]*","([a-z.]{2,7})"')
-GOOGLE_MARK = "domain:google.com"
+ISO_RE = re.compile(r'this\.gbar_=\{CONFIG:.{0,400}?"([A-Z]{3})",null,null,"')
 
 
 def log(msg: str) -> None:
@@ -72,30 +78,32 @@ def notify(text: str) -> None:
         log(f"notify failed: {exc}")
 
 
-def probe_gemini(pretend: str | None = None) -> tuple[str | None, int, int]:
-    """(cc, http_code, bytes) для Gemini с NL-адреса. pretend подменяет cc (тест логики)."""
-    if pretend:
-        return pretend, 200, 900000
+def probe_gemini(pretend_stub: bool = False) -> tuple[str | None, str | None, int, int]:
+    """(cc, iso3, http, bytes) с NL-адреса. pretend_stub подменяет вердикт (тест логики)."""
+    if pretend_stub:
+        return "ru", "RUS", 200, 961554
+    tmp = Path("/tmp/gemini-gate.html")
+    tmp.unlink(missing_ok=True)
     cmd = ["curl", "-sS", "--interface", NL_IP, "--max-time", "30",
            "-H", "Accept-Language: en", "-A", UA,
-           "-o", "/tmp/gemini-gate.html", "-w", "%{http_code}",
-           "https://gemini.google.com/app"]
+           "-o", str(tmp), "-w", "%{http_code}", "https://gemini.google.com/app"]
     try:
         r = subprocess.run(cmd, capture_output=True, text=True, timeout=45)
         code = int(r.stdout.strip() or 0)
-        body = Path("/tmp/gemini-gate.html").read_bytes() if Path("/tmp/gemini-gate.html").exists() else b""
+        body = tmp.read_text(errors="ignore") if tmp.exists() else ""
     except (subprocess.SubprocessError, ValueError, OSError) as exc:
         log(f"probe error: {exc}")
-        return None, 0, 0
-    m = CC_RE.search(body.decode(errors="ignore"))
-    return (m.group(1) if m else None), code, len(body)
+        return None, None, 0, 0
+    m_cc = CC_RE.search(body)
+    m_iso = ISO_RE.search(body)
+    return (m_cc.group(1) if m_cc else None), (m_iso.group(1) if m_iso else None), code, len(body)
 
 
-def google_rule_pos(cfg: dict) -> int:
+def test_rule_pos(cfg: dict) -> int:
     for i, r in enumerate(cfg["routing"]["rules"]):
-        if not r.get("inboundTag") and GOOGLE_MARK in (r.get("domain") or []):
+        if r.get("inboundTag") == [TARGET_INBOUND]:
             return i
-    raise SystemExit("не нашёл глобальное Google-правило в config.json")
+    raise SystemExit(f"не нашёл правило для {TARGET_INBOUND} в config.json")
 
 
 def rule_target(rule: dict) -> str:
@@ -113,13 +121,15 @@ def set_target(rule: dict, tag: str) -> None:
 
 def main() -> int:
     dry = "--dry-run" in sys.argv
-    pretend = next((a.split("=", 1)[1] for a in sys.argv if a.startswith("--pretend-cc=")), None)
+    pretend = "--pretend-stub" in sys.argv
     state = json.loads(STATE.read_text()) if STATE.exists() else {}
     gate = state.get("gate", NL_TAG)
     streak = int(state.get("ok_streak", 0))
 
-    cc, code, size = probe_gemini(pretend)
-    healthy = code == 200 and size > 50000 and cc is not None and cc not in BLOCKED_CC
+    cc, iso, code, size = probe_gemini(pretend)
+    healthy = (code == 200 and size > 50000 and iso is not None
+               and iso not in BLOCKED3 and (cc is None or cc not in BLOCKED2))
+
     desired = gate
     if healthy:
         streak += 1
@@ -129,14 +139,15 @@ def main() -> int:
         streak = 0
         if gate == NL_TAG:
             desired = FALLBACK_TAG
-    log(f"probe: cc={cc} http={code} bytes={size} healthy={healthy} gate={gate} streak={streak}")
+    log(f"probe: cc={cc} iso={iso} http={code} bytes={size} healthy={healthy} "
+        f"gate={gate} streak={streak}")
 
     cfg = json.loads(CONFIG.read_text())
-    pos = google_rule_pos(cfg)
+    pos = test_rule_pos(cfg)
     current = rule_target(cfg["routing"]["rules"][pos])
-    log(f"правило[{pos}] сейчас -> {current}; хотим -> {desired}")
+    log(f"правило[{pos}] ({TARGET_INBOUND}) сейчас -> {current}; хотим -> {desired}")
 
-    state.update({"gate": desired, "ok_streak": streak, "last_cc": cc,
+    state.update({"gate": desired, "ok_streak": streak, "last_cc": cc, "last_iso": iso,
                   "last_http": code, "updated": datetime.now(timezone.utc).isoformat()})
     if dry:
         STATE.write_text(json.dumps(state, indent=2))
@@ -147,7 +158,7 @@ def main() -> int:
         fcntl.flock(lock, fcntl.LOCK_EX)
         try:
             fresh = json.loads(CONFIG.read_text())
-            rule = fresh["routing"]["rules"][google_rule_pos(fresh)]
+            rule = fresh["routing"]["rules"][test_rule_pos(fresh)]
             set_target(rule, desired)
             CONFIG.write_text(json.dumps(fresh, indent=2, ensure_ascii=False) + "\n")
         finally:
@@ -158,15 +169,15 @@ def main() -> int:
             log(f"apply УПАЛ: {(r.stderr or r.stdout)[-300:]}")
             notify(f"🚨 Gemini-гейт: не смог применить переключение на {desired}")
             return 1
-        log(f"apply ok: Google -> {desired}")
-        if pretend:
-            return 0
-        if desired == FALLBACK_TAG:
-            notify(f"⚠️ Gemini-гейт: NL-адрес отдаёт заглушку (cc={cc}). "
-                   f"Google переведён на релей, проверка каждые 2–3 ч.")
-        else:
-            notify("✅ Gemini-гейт: NL-адрес снова отдаёт рабочую страницу "
-                   f"(cc={cc}). Google вернулся на новый IP.")
+        log(f"apply ok: {TARGET_INBOUND} -> {desired}")
+        if not pretend:
+            if desired == FALLBACK_TAG:
+                notify(f"⚠️ Gemini-гейт: NL-адрес отдаёт заглушку "
+                       f"(страна {iso or cc or '?'}). Узел «Нидерланды» переведён на релей, "
+                       f"проверка каждые 2–3 ч.")
+            else:
+                notify(f"✅ Gemini-гейт: NL-адрес снова отдаёт рабочую страницу "
+                       f"(страна {iso or cc}). Узел вернулся на новый IP.")
     STATE.write_text(json.dumps(state, indent=2))
     return 0
 

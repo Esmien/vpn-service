@@ -467,7 +467,7 @@
      "domain:withgoogle.com",
      "domain:google.dev"
     ],
-    "outboundTag": "nl"
+    "balancerTag": "bal-google"
    },
    {
     "type": "field",
