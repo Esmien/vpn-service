@@ -346,7 +346,7 @@ def build_meta(token_dir: Path, uid: str) -> None:
     REALITY (443, XTLS-Vision) is the primary entry; the old WS node stays next to it
     as «совместимость» until every client is known to speak REALITY.
     """
-    path = _BRAND["paths"]["general"]
+    path = _BRAND["paths"].get("public_general", _BRAND["paths"]["general"])
     r_link = vless_reality(uid)
     # WS-узел выдаётся только по явному маркеру «compat» в каталоге токена: по умолчанию
     # подписка несёт один REALITY-узел, а старые WS-входы (2087/8443) остаются живыми,

@@ -28,7 +28,8 @@
     "p21": "/p21",
     "p22": "/p22",
     "p23": "/p23",
-    "gemini": "/gemini"
+    "gemini": "/gemini",
+    "public_general": "/assets/xdZb8xOKWJMLO5fEoTFvHqh-"
   },
   "upstreams": {
     "/ws": 10081,
