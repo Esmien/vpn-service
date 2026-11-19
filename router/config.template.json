@@ -417,6 +417,13 @@
    },
    {
     "type": "field",
+    "inboundTag": [
+     "in-test"
+    ],
+    "outboundTag": "nl"
+   },
+   {
+    "type": "field",
     "domain": [
      "domain:googlevideo.com",
      "domain:ytimg.com",
@@ -441,21 +448,6 @@
      "domain:google.dev"
     ],
     "balancerTag": "bal-google"
-   },
-   {
-    "type": "field",
-    "inboundTag": [
-     "in-test"
-    ],
-    "domain": [
-     "domain:google.com",
-     "domain:googleapis.com",
-     "domain:gstatic.com",
-     "domain:googleusercontent.com",
-     "domain:withgoogle.com",
-     "domain:google.dev"
-    ],
-    "outboundTag": "nl"
    },
    {
     "type": "field",
