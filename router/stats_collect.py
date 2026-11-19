@@ -26,11 +26,13 @@ LABELS = {                       # display names only; state keys stay stable
 }
 WINDOW = 7 * 86400
 ROUTE_LABELS = {
-    "direct": "Эстония (direct)",
-    "p15": "Москва (подписка)",
-    "p17": "Новосибирск (подписка)",
-    "fr": "Франция (Gemini)",
-    "fi": "Финляндия (Gemini)",
+    "direct": "🇪🇪 Эстония (основной)",
+    "nl": "🇳🇱 Нидерланды (Gemini)",
+    "fr": "Gemini (UI VPN)",
+    "fi": "Gemini (UI VPN) — резерв",
+    "p15": "UI VPN — Москва",
+    "p17": "UI VPN — Новосибирск",
+    "ru": "RU-хост",
 }
 SKIP_OUT = {"blocked", "api", "warp"}
 

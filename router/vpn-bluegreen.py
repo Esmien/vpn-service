@@ -214,10 +214,15 @@ def probe_direct(color: str, timeout: float = 1.5) -> tuple[int, int]:
 
 def probe_nginx() -> bool:
     brand = json.loads((BASE / "brand.json").read_text())
+    # VPN-порты больше не слушают 127.0.0.1: они привязаны к адресу edge (addresses.json).
+    try:
+        target = json.loads((BASE / "addresses.json").read_text())["edge"]["ip"]
+    except Exception:
+        target = "127.0.0.1"
     ok = True
     for path in ("/general", "/ws"):
         r = subprocess.run(["curl", "-sS", "-m", "8", "--resolve",
-                            f"{brand['host']}:{brand['port']}:127.0.0.1", "-o", "/dev/null",
+                            f"{brand['host']}:{brand['port']}:{target}", "-o", "/dev/null",
                             "-w", "%{http_code}", f"https://{brand['host']}:{brand['port']}{path}"],
                            capture_output=True, text=True)
         if r.stdout.strip() != "400":

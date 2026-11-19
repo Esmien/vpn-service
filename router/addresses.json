@@ -1,13 +1,22 @@
 {
   "brand": {
     "ip": "141.98.166.213",
-    "role": "бренд: сайт esmien.ru, WebUI, бот, SSH",
-    "listens": ["80", "443", "4443", "22"]
+    "role": "бренд: сайт esmien.ru, WebUI, бот, SSH. Ни входа, ни выхода VPN",
+    "listens": [
+      "80",
+      "443",
+      "4443",
+      "22"
+    ]
   },
   "edge": {
     "ip": "85.92.158.238",
-    "role": "единственный вход VPN: VLESS/WS 8443 и 2087, hysteria2 UDP 8443",
-    "listens": ["8443/tcp", "2087/tcp", "8443/udp"]
+    "role": "вход VPN (VLESS/WS 8443 и 2087, hysteria2 UDP 8443) + выход обычного трафика (direct sendThrough)",
+    "listens": [
+      "8443/tcp",
+      "2087/tcp",
+      "8443/udp"
+    ]
   },
   "gemini": {
     "ip": "85.92.158.226",
