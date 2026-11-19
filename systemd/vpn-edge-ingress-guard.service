@@ -1,0 +1,13 @@
+[Unit]
+Description=Block web and SSH ingress on VPN-only edge IP
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/sh -c '/usr/sbin/iptables -w -C INPUT -i ens3 -d 85.92.158.238/32 -p tcp -m multiport --dports 22,80 -m conntrack --ctstate NEW,INVALID -j DROP || /usr/sbin/iptables -w -I INPUT 1 -i ens3 -d 85.92.158.238/32 -p tcp -m multiport --dports 22,80 -m conntrack --ctstate NEW,INVALID -j DROP'
+ExecStop=/usr/sbin/iptables -w -D INPUT -i ens3 -d 85.92.158.238/32 -p tcp -m multiport --dports 22,80 -m conntrack --ctstate NEW,INVALID -j DROP
+
+[Install]
+WantedBy=multi-user.target

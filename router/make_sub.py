@@ -77,9 +77,9 @@ def ru_node() -> str:
     return EE
 
 
-def vless(uid: str, path: str, tag: str, addr: str = HOST) -> str:
+def vless(uid: str, path: str, tag: str, addr: str = HOST, port: int = PORT) -> str:
     query = {"type": "ws", "security": "tls", "sni": HOST, "host": HOST, "path": path, "encryption": "none"}
-    return f"vless://{uid}@{addr}:{PORT}?" + urllib.parse.urlencode(query) + "#" + urllib.parse.quote(tag)
+    return f"vless://{uid}@{addr}:{port}?" + urllib.parse.urlencode(query) + "#" + urllib.parse.quote(tag)
 
 
 # --- REALITY (XTLS-Vision) ------------------------------------------------
@@ -187,11 +187,11 @@ def sing_reality(uid: str, name: str = REALITY_TAG, addr: str = IP) -> dict | No
                                 "short_id": p["shortId"]}}}
 
 
-def clash_proxy(uid: str, name: str, path: str, addr: str = HOST) -> str:
+def clash_proxy(uid: str, name: str, path: str, addr: str = HOST, port: int = PORT) -> str:
     return f"""  - name: {json.dumps(name, ensure_ascii=False)}
     type: vless
     server: {addr}
-    port: {PORT}
+    port: {port}
     uuid: {uid}
     network: ws
     tls: true
@@ -355,7 +355,8 @@ def build_meta(token_dir: Path, uid: str) -> None:
     # у него есть рабочий вход без правки подписки. Выключатель — WS_COMPAT_DEFAULT.
     compat = bool(r_link) and (WS_COMPAT_DEFAULT or (token_dir / "compat").exists())
     ws_tag = (WS_COMPAT_TAG if compat else META_TAG)
-    ws_link = vless(uid, path, ws_tag)
+    ws_port = 443 if (token_dir / "main-port-443").exists() else PORT
+    ws_link = vless(uid, path, ws_tag, port=ws_port)
     extra = _extra_nodes(token_dir)
     v_link = None  # Vision снят: у владельца он не проходит
     # REALITY-вход с камо снят: чужой SNI на нашем IP — подпись подмены, из-за неё
@@ -379,7 +380,7 @@ def build_meta(token_dir: Path, uid: str) -> None:
     header = "# Esmien VPN"
     proxies = clash_proxy_vision(uid) if v_link else ""
     if compat or not r_link:
-        proxies += clash_proxy(uid, WS_COMPAT_TAG if compat else META_TAG, path)
+        proxies += clash_proxy(uid, WS_COMPAT_TAG if compat else META_TAG, path, port=ws_port)
     proxies += "".join(e.get("clash", "") for e in extra)
     (token_dir / "clash.yaml").write_text(f"""{header}
 mixed-port: 7890
@@ -410,7 +411,7 @@ proxies:
   - MATCH,Esmien VPN
 """, encoding="utf-8")
 
-    out = {"type": "vless", "tag": META_TAG, "server": HOST, "server_port": PORT, "uuid": uid,
+    out = {"type": "vless", "tag": META_TAG, "server": HOST, "server_port": ws_port, "uuid": uid,
            "transport": {"type": "ws", "path": path, "headers": {"Host": HOST}},
            "tls": {"enabled": True, "server_name": HOST}}
     if r_link and not compat:
