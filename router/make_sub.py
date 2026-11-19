@@ -355,7 +355,7 @@ def build_meta(token_dir: Path, uid: str) -> None:
     # у него есть рабочий вход без правки подписки. Выключатель — WS_COMPAT_DEFAULT.
     compat = bool(r_link) and (WS_COMPAT_DEFAULT or (token_dir / "compat").exists())
     ws_tag = (WS_COMPAT_TAG if compat else META_TAG)
-    ws_port = 443 if (token_dir / "main-port-443").exists() else PORT
+    ws_port = 443  # Main subscription node; subscription delivery remains on 8443.
     ws_link = vless(uid, path, ws_tag, port=ws_port)
     extra = _extra_nodes(token_dir)
     v_link = None  # Vision снят: у владельца он не проходит
