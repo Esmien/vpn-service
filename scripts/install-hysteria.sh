@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Install the Hysteria2 backup entry (UDP/443) on a fresh server.
+# Install the Hysteria2 backup entry (UDP/8443) on a fresh server.
 #
 # Idempotent: re-running keeps the existing secrets in /etc/hysteria/config.yaml
 # and only refreshes the binary and the systemd unit.
@@ -11,7 +11,7 @@ set -euo pipefail
 
 HY_VERSION="${HY_VERSION:-app/v2.14.0}"
 DOMAIN="${DOMAIN:-vpn.esmien.ru}"
-CERT_DIR="${CERT_DIR:-/etc/letsencrypt/live/vpn-parallel-domains}"
+CF_INI="${CF_INI:-/root/.secrets/cf-esmien-com.ini}"
 CONF=/etc/hysteria/config.yaml
 SECRETS=/root/.secrets/hysteria-owner.txt
 UNIT=/etc/systemd/system/hysteria-server.service
@@ -35,15 +35,14 @@ else
   OBFS=$(python3 -c 'import secrets;print(secrets.token_urlsafe(18))')
   sed -e "s|__AUTH_PASSWORD__|$PW|" -e "s|__OBFS_PASSWORD__|$OBFS|" \
       "$SRC_DIR/hysteria/config.example.yaml" > "$CONF"
+  CF_INI="$CF_INI" CONF="$CONF" /usr/bin/python3 -c 'import os,pathlib; p=pathlib.Path(os.environ["CONF"]); token=pathlib.Path(os.environ["CF_INI"]).read_text().split("=",1)[1].strip(); s=p.read_text(); assert "__CLOUDFLARE_API_TOKEN__" in s; p.write_text(s.replace("__CLOUDFLARE_API_TOKEN__", token))'
   chmod 600 "$CONF"
   umask 077
-  printf 'password=%s\nobfs=%s\nport=443/udp\n' "$PW" "$OBFS" > "$SECRETS"
+  printf 'password=%s\nobfs=%s\nport=8443/udp\n' "$PW" "$OBFS" > "$SECRETS"
   chmod 600 "$SECRETS"
 fi
 
-# cert paths come from the wildcard issued by deploy.sh
-sed -i -e "s|^  cert: .*|  cert: $CERT_DIR/fullchain.pem|" \
-       -e "s|^  key: .*|  key: $CERT_DIR/privkey.pem|" "$CONF"
+# Hysteria ACME selects its own separate certificate by client SNI.
 sed -i "s|^    url: .*|    url: http://127.0.0.1|" "$CONF"
 
 echo "== systemd unit"
@@ -76,7 +75,7 @@ vpn-cfg apply | tail -3
 cat <<EOF
 
 Done. Verify from a client (Hiddify / NekoBox / sing-box; v2rayNG cannot do hy2):
-  hysteria2://<password>@$DOMAIN:443/?sni=$DOMAIN&obfs=salamander&obfs-password=<obfs>#...
+  hysteria2://<password>@$DOMAIN:8443/?sni=$DOMAIN&obfs=salamander&obfs-password=<obfs>#...
   password/obfs: $SECRETS
 The node is added per-token through /var/www/esmien-sub/<token>/extra_nodes.json,
 then: cd /root/vpn-router && python3 make_sub.py

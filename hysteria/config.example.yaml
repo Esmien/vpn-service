@@ -1,8 +1,15 @@
-listen: :443
+listen: 85.92.158.238:8443
 
-tls:
-  cert: /etc/letsencrypt/live/vpn-parallel-domains/fullchain.pem
-  key: /etc/letsencrypt/live/vpn-parallel-domains/privkey.pem
+acme:
+  domains:
+    - vpn.esmien.ru
+    - share.esmien.com
+  type: dns
+  dir: /root/vpn-router/hysteria-acme
+  dns:
+    name: cloudflare
+    config:
+      cloudflare_api_token: "__CLOUDFLARE_API_TOKEN__"
 
 auth:
   type: password

@@ -37,6 +37,8 @@ class Handler(BaseHTTPRequestHandler):
                 content = base64.b64encode(base64.b64decode(content, validate=False).replace(OLD.encode(), NEW.encode())) + b'\n'
             else:
                 content = content.replace(OLD.encode(), NEW.encode())
+                if kind == 'u':
+                    content = content.replace((NEW + ':8443/sub/').encode(), (NEW + '/sub/').encode())
         except (OSError, ValueError):
             return self.send_error(404)
         self.send_response(200)

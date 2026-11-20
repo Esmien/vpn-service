@@ -17,7 +17,7 @@ CONF = json.loads((BASE / "brand.json").read_text())
 HOST = CONF["host"]
 CERT = CONF["cert_dir"]
 PARALLEL_HOST = "share.esmien.com"
-PARALLEL_CERT = "/etc/letsencrypt/live/vpn-parallel-domains"
+PARALLEL_CERT = "/etc/letsencrypt/live/share-esmien-com"
 PORTS = (CONF["port"], CONF["alt_port"])
 BG_COLOR = Path("/root/vpn-router/vpn-color")
 BG_OFFSET = 1000
@@ -131,6 +131,14 @@ def render(port: int, host: str = HOST, cert: str = CERT) -> str:
         for path, up in UPSTREAMS if path not in RETIRED_PUBLIC)
     logname = str(port) if host == HOST else f"{port}-{host.split('.')[0]}"
     return TEMPLATE.format(edge=EDGE_IP or "*", port=port, host=host, cert=cert, logname=logname, locations=locations.rstrip("\n"))
+
+
+def parallel_delivery_locations() -> str:
+    """Serve current personal pages and bundles through the loopback adapter."""
+    text = render(PORTS[0], PARALLEL_HOST, PARALLEL_CERT)
+    text = text.replace("root /var/www/esmien-sub;\n        try_files /$esmien_sub_token/$esmien_sub_file =404;", "proxy_pass http://127.0.0.1:18744;\n        proxy_set_header X-Sub-File $esmien_sub_file;")
+    text = text.replace("root /var/www/esmien-pages;\n        try_files /$esmien_page_token.html =404;", "proxy_pass http://127.0.0.1:18744;")
+    return text[text.index("    location ~ ^/sub/"):text.index("    location / { return 404; }")]
 
 
 def write_title_map() -> None:
@@ -269,6 +277,7 @@ server {{
 }}
 """
     parallel_vhost = main_vhost.replace(f"server_name {HOST};", f"server_name {PARALLEL_HOST};").replace(CERT, PARALLEL_CERT)
+    parallel_vhost = parallel_vhost.replace("    location / { return 404; }", parallel_delivery_locations() + "    location / { return 404; }")
     VHOST_443.write_text(main_vhost + "\n" + parallel_vhost)
     print(f"written {VHOST_443} (SNI {HOST} -> xray {CONF['paths']['general']} + публичный alias)")
 
