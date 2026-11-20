@@ -70,7 +70,23 @@ TEMPLATE = """server {{
     ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
     access_log /var/log/nginx/vpn-{logname}.log vpnx;
 
-    location = / {{ root /var/www/vpn-stub; try_files /index.html =404; default_type text/html; }}
+    # Прикрытие: вместо заглушки «Welcome» — страница входа LiteLLM (без бренда).
+    location = / {{ return 302 /ui/; }}
+    location ^~ /ui/ {{
+        limit_except GET HEAD {{ deny all; }}
+        proxy_pass http://127.0.0.1:4000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_read_timeout 60s;
+    }}
+    location ^~ /litellm-asset-prefix/ {{
+        proxy_pass http://127.0.0.1:4000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_read_timeout 60s;
+    }}
+    location = /favicon.ico {{ proxy_pass http://127.0.0.1:4000; }}
 {locations}
     location ~ ^/sub/(?<esmien_sub_token>[A-Za-z0-9_-]+)/?$ {{
         root /var/www/esmien-sub;
@@ -265,11 +281,29 @@ server {{
     ssl_certificate_key {CERT}/privkey.pem;
     include /etc/letsencrypt/options-ssl-nginx.conf;
 
+    absolute_redirect off;
+    port_in_redirect off;
     access_log /var/log/nginx/vpn-443.log;
     error_log  /var/log/nginx/vpn-443.err;
 
     # Тот же нейтральный сайт, что и на основном HTTPS-входе.
-    location = / {{ root /var/www/vpn-stub; try_files /index.html =404; default_type text/html; }}
+    # Прикрытие: вместо заглушки «Welcome» — страница входа LiteLLM (без бренда).
+    location = / {{ return 302 /ui/; }}
+    location ^~ /ui/ {{
+        limit_except GET HEAD {{ deny all; }}
+        proxy_pass http://127.0.0.1:4000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_read_timeout 60s;
+    }}
+    location ^~ /litellm-asset-prefix/ {{
+        proxy_pass http://127.0.0.1:4000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_read_timeout 60s;
+    }}
+    location = /favicon.ico {{ proxy_pass http://127.0.0.1:4000; }}
 
 {locations}
 
