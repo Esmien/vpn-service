@@ -11,7 +11,7 @@ set -euo pipefail
 
 HY_VERSION="${HY_VERSION:-app/v2.14.0}"
 DOMAIN="${DOMAIN:-vpn.esmien.ru}"
-CERT_DIR="${CERT_DIR:-/etc/letsencrypt/live/esmien-wildcard}"
+CERT_DIR="${CERT_DIR:-/etc/letsencrypt/live/vpn-parallel-domains}"
 CONF=/etc/hysteria/config.yaml
 SECRETS=/root/.secrets/hysteria-owner.txt
 UNIT=/etc/systemd/system/hysteria-server.service

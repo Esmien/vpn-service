@@ -1,8 +1,8 @@
 listen: :443
 
 tls:
-  cert: /etc/letsencrypt/live/esmien-wildcard/fullchain.pem
-  key: /etc/letsencrypt/live/esmien-wildcard/privkey.pem
+  cert: /etc/letsencrypt/live/vpn-parallel-domains/fullchain.pem
+  key: /etc/letsencrypt/live/vpn-parallel-domains/privkey.pem
 
 auth:
   type: password

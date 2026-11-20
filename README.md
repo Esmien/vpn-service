@@ -1,5 +1,22 @@
 # VPN: VLESS over WebSocket + TLS (вход) -> внешние выходы
 
+## Параллельный домен
+
+`vpn.esmien.ru` и `share.esmien.com` работают одновременно. Старые страницы и подписки
+не меняются; новые страницы имеют тот же `/u/<token>` на `share.esmien.com:8443`.
+Локальный `vpn-parallel-domain.service` читает исходные страницы и подписки и заменяет
+имя при выдаче; токены и права пользователей не меняются, удалённые файлы сразу исчезают
+и с нового домена. Сервис слушает только 127.0.0.1:18744.
+
+Восстановление: выпустить DNS-01 сертификат `vpn-parallel-domains` на оба имени с
+учётными данными `/root/.secrets/cf-esmien-com.ini`; установить `router/parallel_domain.py`
+в `/root/vpn-router/`, `systemd/vpn-parallel-domain.service` в `/etc/systemd/system/`,
+выполнить `systemctl daemon-reload` и `systemctl enable --now vpn-parallel-domain`.
+Установить `scripts/reload-hysteria-parallel-cert.sh` как исполняемый файл в
+`/etc/letsencrypt/renewal-hooks/deploy/`; Hysteria использует этот двухдоменный сертификат.
+Генератор `apply_brand.py` создаёт оба HTTPS-входа и SNI-маршруты. После применения
+проверить старые и новые VLESS и Hysteria2, страницы и три формата подписки.
+
 Домашний провайдер режет 443 и fake-TLS/MTProto, но пропускает настоящий TLS на
 нестандартных портах. Поэтому вход — VLESS+WS за nginx с сертификатом Let's Encrypt,
 а внешние выходы подключаются как outbound'ы Xray.
