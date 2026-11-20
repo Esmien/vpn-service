@@ -53,6 +53,11 @@ def _bg_offset() -> int:
 
 UPSTREAMS = [(path, port + _bg_offset()) for path, port in CONF["upstreams"].items()]
 
+# Публично снятые пути. Внутренние инбаунды Xray (`ws-in`, `in-france`, `in-test`) при этом
+# остаются как есть — перестаёт работать только nginx-локация. `/general` и публичный alias
+# на 443 не снимаются: на них сидят живые клиенты (см. runbook, «Старые пути»).
+RETIRED_PUBLIC = {"/ws", "/france", "/gemini", "/fi"}
+
 TEMPLATE = """server {{
     listen {edge}:{port} ssl;
     server_name {host};
@@ -81,6 +86,7 @@ TEMPLATE = """server {{
         default_type text/html;
         add_header Cache-Control "no-store";
     }}
+    location / {{ return 404; }}
 }}
 """
 
@@ -117,11 +123,10 @@ LOCATION = """    location {path} {{
 
 
 def render(port: int, host: str = HOST, cert: str = CERT) -> str:
-    # Retire the two owner-only public entries without changing Xray routing.
-    retired = {CONF["paths"].get("france"), CONF["paths"].get("gemini")}
+    # Публично снятые пути не публикуем; маршрутизация Xray при этом не меняется.
     locations = "\n".join(
         (PANEL_LOCATION if path == "/panel/" else LOCATION).format(path=path, upstream=up)
-        for path, up in UPSTREAMS if path not in retired)
+        for path, up in UPSTREAMS if path not in RETIRED_PUBLIC)
     logname = str(port) if host == HOST else f"{port}-{host.split('.')[0]}"
     return TEMPLATE.format(edge=EDGE_IP or "*", port=port, host=host, cert=cert, logname=logname, locations=locations.rstrip("\n"))
 
@@ -208,13 +213,16 @@ def write_reject_vhosts() -> None:
 def write_443_vhost() -> None:
     """Отдельный TLS-вход на :443 (SNI {HOST}) — для сетей, где 8443 режут.
 
-    Пускает оба «входных» пути подписки (`/ws` и `/general`), чтобы тестовый узел
-    делался простой сменой порта в клиенте, а не ручным вводом заново.
+    Пускает основной вход `/general` и публичный alias подписки (`paths.public_general`),
+    который nginx переписывает на внутренний `/general` активного цвета. Старый `/ws`
+    снят вместе с остальными устаревшими путями (RETIRED_PUBLIC).
     """
     ups = dict(UPSTREAMS)
     blocks = []
-    for path_key in ("owner", "general"):
+    for path_key in ("general",):
         uri = CONF["paths"][path_key]
+        if uri in RETIRED_PUBLIC:
+            continue
         blocks.append(f"""    location {uri} {{
         proxy_pass http://127.0.0.1:{ups[uri]};
         proxy_http_version 1.1;
@@ -257,7 +265,7 @@ server {{
     location / {{ return 404; }}
 }}
 """)
-    print(f"written {VHOST_443} (SNI {HOST} -> xray {', '.join(CONF['paths'][k] for k in ('owner','general'))})")
+    print(f"written {VHOST_443} (SNI {HOST} -> xray {CONF['paths']['general']} + публичный alias)")
 
 
 def main() -> int:

@@ -219,15 +219,21 @@ def probe_nginx() -> bool:
         target = json.loads((BASE / "addresses.json").read_text())["edge"]["ip"]
     except Exception:
         target = "127.0.0.1"
+    # Проверяем ровно то, что опубликовано: старый /ws снят (RETIRED_PUBLIC в apply_brand.py),
+    # основной узел подписки живёт на 443 по paths.public_general.
+    checks = [(brand["port"], "/general", "/general")]
+    public = brand["paths"].get("public_general")
+    if public:
+        checks.append((443, public, "публичный alias 443"))
     ok = True
-    for path in ("/general", "/ws"):
+    for port, path, label in checks:
         r = subprocess.run(["curl", "-sS", "-m", "8", "--resolve",
-                            f"{brand['host']}:{brand['port']}:{target}", "-o", "/dev/null",
-                            "-w", "%{http_code}", f"https://{brand['host']}:{brand['port']}{path}"],
+                            f"{brand['host']}:{port}:{target}", "-o", "/dev/null",
+                            "-w", "%{http_code}", f"https://{brand['host']}:{port}{path}"],
                            capture_output=True, text=True)
         if r.stdout.strip() != "400":
             ok = False
-            print(f"  {path}: {r.stdout.strip() or 'нет ответа'}")
+            print(f"  {label}: {r.stdout.strip() or 'нет ответа'}")
     return ok
 
 

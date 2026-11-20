@@ -18,17 +18,19 @@ for h in ai.esmien.ru llm.esmien.ru app.esmien.ru mon.esmien.ru search.esmien.ru
 done
 chk "bot.esmien.ru (webhook)" '^(200|401|403|404|405)$' --resolve "bot.esmien.ru:443:127.0.0.1" "https://bot.esmien.ru/"
 
-echo "== VPN WS-входы"
-chk "vpn :8443 /ws"     '^(200|400)$' --resolve "$HOST:8443:127.0.0.1" "https://$HOST:8443/ws"
-chk "vpn :2087 /ws"     '^(200|400)$' --resolve "$HOST:2087:127.0.0.1" "https://$HOST:2087/ws"
+echo "== VPN WS-входы (опубликовано: /general, публичный alias на 443, снят /ws)"
+chk "vpn :8443 /general" '^(200|400)$' --resolve "$HOST:8443:127.0.0.1" "https://$HOST:8443/general"
+chk "vpn :2087 /general" '^(200|400)$' --resolve "$HOST:2087:127.0.0.1" "https://$HOST:2087/general"
 chk "подписка :8443"    '^200$'       --resolve "$HOST:8443:127.0.0.1" "https://$HOST:8443/sub/$(ls /var/www/esmien-sub | head -1)"
+PUB=$(python3 -c "import json;print(json.load(open('/root/vpn-router/brand.json'))['paths']['public_general'])" 2>/dev/null)
+[[ -n "$PUB" ]] && chk "vpn :443 публичный alias" '^(200|400)$' --resolve "$HOST:443:127.0.0.1" "https://$HOST:443$PUB"
 
-echo "== WS-входы на 8443 / 2087 (VLESS+TLS+WS)"
-for hp in "127.0.0.1:8443 /ws" "127.0.0.1:2087 /ws"; do
+echo "== снятые пути не должны апгрейдиться"
+for hp in "8443 /ws" "8443 /fi" "8443 /p15" "443 /ws"; do
   port=${hp%% *}; path=${hp##* }
-  code=$(curl -sk -o /dev/null -m 8 -w '%{http_code}' --resolve vpn.esmien.ru:${port##*:}:127.0.0.1 "https://vpn.esmien.ru:${port##*:}${path}" 2>/dev/null)
-  if [[ "$code" == "400" || "$code" == "101" ]]; then echo "  ok   ${port}${path} -> $code"
-  else echo "  FAIL ${port}${path} -> $code"; fails=$((fails+1)); fi
+  code=$(curl -sk -o /dev/null -m 8 -w '%{http_code}' --resolve vpn.esmien.ru:${port}:127.0.0.1 "https://vpn.esmien.ru:${port}${path}" 2>/dev/null)
+  if [[ "$code" == "404" || "$code" == "000" ]]; then echo "  ok   ${port}${path} -> $code (снят)"
+  else echo "  FAIL ${port}${path} -> $code (ещё отвечает)"; fails=$((fails+1)); fi
 done
 
 echo "== палец по IP (unknown SNI должен молчать)"
