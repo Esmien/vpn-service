@@ -12,10 +12,6 @@
     "clients": [
      {
       "id": "<VLESS_UUID>",
-      "email": "ws-user"
-     },
-     {
-      "id": "<VLESS_UUID>",
       "email": "ws-in:Наташа"
      },
      {
@@ -372,8 +368,12 @@
   {
    "tag": "direct",
    "protocol": "freedom",
-   "settings": {
-    "domainStrategy": "UseIPv4"
+   "settings": {},
+   "sendThrough": "85.92.158.238",
+   "streamSettings": {
+    "sockopt": {
+     "domainStrategy": "UseIPv4"
+    }
    }
   },
   {
@@ -421,6 +421,14 @@
      "in-test"
     ],
     "outboundTag": "nl"
+   },
+   {
+    "type": "field",
+    "domain": [
+     "domain:stats.esmien.com",
+     "full:llm.esmien.ru"
+    ],
+    "outboundTag": "direct"
    },
    {
     "type": "field",
