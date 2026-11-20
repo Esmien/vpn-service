@@ -78,9 +78,9 @@ TEMPLATE = """<!doctype html>
   .tag{{font-size:10.5px; letter-spacing:.4px; text-transform:uppercase; color:#0a0d12; font-weight:800;
     background:linear-gradient(135deg,var(--accent2),#7ff0d7); padding:2px 7px; border-radius:999px}}
   .tag.warm{{background:linear-gradient(135deg,#ffd479,#ff9f6b)}}
-  .row{{display:flex; gap:10px; min-width:0}}
+  .row{{display:flex; gap:10px; min-width:0; flex-wrap:wrap}}
   .btn{{
-    flex:1 1 0; min-width:0; display:flex; align-items:center; justify-content:center; gap:8px; text-decoration:none;
+    flex:1 1 96px; min-width:0; display:flex; align-items:center; justify-content:center; gap:8px; text-decoration:none;
     padding:13px 10px; border-radius:14px; font-size:14.5px; font-weight:650; color:var(--text);
     border:1px solid var(--line); background:rgba(255,255,255,.045); cursor:pointer;
     transition:transform .12s ease, background .2s ease; -webkit-tap-highlight-color:transparent;
@@ -123,7 +123,7 @@ TEMPLATE = """<!doctype html>
 
 {cards}
   <footer>
-    Приложение не установлено? <a href="https://www.happ.su">Happ</a> или <a href="https://incy.cc">INCY</a>.<br>
+    Приложение не установлено? <a href="https://www.happ.su">Happ</a>, <a href="https://incy.cc">INCY</a> или <a href="https://github.com/chen08209/FlClash/releases">FlClash</a>.<br>
     Если кнопка не открывает приложение — скопируй ссылку и вставь её в приложении через «+».
   </footer>
 </main>
@@ -158,6 +158,7 @@ CARD = """  <section class="card">
     <div class="row">
       <a class="btn primary" href="happ://add/{url}">Happ</a>
       <a class="btn" href="incy://add/{url}">INCY</a>
+{apps}
     </div>
     <div class="copywrap"><button class="copy" type="button" onclick="copyLink('{url}', this)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"
@@ -208,13 +209,15 @@ def render(name: str, user: dict, token: str | None = None) -> str:
     main_desc = (META_DESC + META_DESC_TAIL) if meta else (
         "Наши маршруты: Эстония, Франция, Финляндия и пул релеев. "
         "RU-сервисы идут через Москву автоматически.")
+    flclash = ('      <a class="btn" href="clash://install-config?url={url}">FlClash</a>'
+               .format(url=sub_url(user["token"])))
     cards = [CARD.format(icon=ICON_MAIN, label="Основная", badge="main", tagcls="",
-                         desc=main_desc, url=sub_url(user["token"]))]
+                         desc=main_desc, url=sub_url(user["token"]), apps=flclash)]
     if user.get("token_lte"):
         cards.append(CARD.format(icon=ICON_LTE, label="LTE", badge="белые списки", tagcls="warm",
                                  desc="Прямые узлы провайдера: работают, когда провайдер режет всё, "
                                       "кроме российских адресов.",
-                                 url=sub_url(user["token_lte"])))
+                                 url=sub_url(user["token_lte"]), apps=""))
     return TEMPLATE.format(name=name, cards="\n".join(cards),
                            intro=INTRO_META if meta else INTRO_DEFAULT)
 
