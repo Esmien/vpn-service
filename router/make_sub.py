@@ -409,6 +409,7 @@ proxies:
   - IP-CIDR,172.16.0.0/12,DIRECT,no-resolve
   - IP-CIDR,192.168.0.0/16,DIRECT,no-resolve
   - DOMAIN-SUFFIX,local,DIRECT
+  - DOMAIN,llm.esmien.ru,Esmien VPN
   - DOMAIN-SUFFIX,esmien.ru,DIRECT
   - MATCH,Esmien VPN
 """, encoding="utf-8")
@@ -432,7 +433,8 @@ proxies:
                           "listen_port": 2080}],
             "outbounds": [o for o in outs if o] + [e["sing"] for e in extra if e.get("sing")]
                          + [{"type": "direct", "tag": "direct"}],
-            "route": {"rules": [{"domain_suffix": [".esmien.ru"], "outbound": "direct"}, {"outbound": match_tag}]}}
+            "route": {"rules": [{"domain": ["llm.esmien.ru"], "outbound": match_tag},
+                                {"domain_suffix": [".esmien.ru"], "outbound": "direct"}, {"outbound": match_tag}]}}
     (token_dir / "singbox.json").write_text(json.dumps(sing, indent=2, ensure_ascii=False),
                                             encoding="utf-8")
     token_dir.chmod(0o755)
@@ -489,6 +491,7 @@ rules:
   - IP-CIDR,172.16.0.0/12,DIRECT,no-resolve
   - IP-CIDR,192.168.0.0/16,DIRECT,no-resolve
   - DOMAIN-SUFFIX,local,DIRECT
+  - DOMAIN,llm.esmien.ru,Esmien VPN
   - DOMAIN-SUFFIX,esmien.ru,DIRECT
   - DOMAIN-SUFFIX,google.com,{FR}
   - DOMAIN-SUFFIX,googleapis.com,{FR}
@@ -511,6 +514,7 @@ rules:
             "inbounds": [{"type": "mixed", "tag": "mixed-in", "listen": "127.0.0.1", "listen_port": 2080}],
             "outbounds": [sb_ours(n, p, a) for n, p, a in ours] + [{"type": "direct", "tag": "direct"}],
             "route": {"rules": [
+                {"domain": ["llm.esmien.ru"], "outbound": EE},
                 {"domain_suffix": [".esmien.ru"], "outbound": "direct"},
                 {"domain_suffix": ["google.com", "googleapis.com", "gstatic.com",
                                    "googleusercontent.com", "withgoogle.com"], "outbound": FR},
