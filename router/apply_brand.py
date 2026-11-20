@@ -70,23 +70,26 @@ TEMPLATE = """server {{
     ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
     access_log /var/log/nginx/vpn-{logname}.log vpnx;
 
-    # Прикрытие: вместо заглушки «Welcome» — страница входа LiteLLM (без бренда).
+    # Прикрытие: страница входа LiteLLM отдаётся из изолированной копии статики
+    # (127.0.0.1:8092). В рабочий LiteLLM (:4000) отсюда не уходит ни один запрос,
+    # а любой вход отбивается тем же 401, что отдаёт настоящая панель.
     location = / {{ return 302 /ui/; }}
     location ^~ /ui/ {{
-        limit_except GET HEAD {{ deny all; }}
-        proxy_pass http://127.0.0.1:4000;
+        proxy_pass http://127.0.0.1:8092;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Forwarded-For $remote_addr;
         proxy_read_timeout 60s;
     }}
     location ^~ /litellm-asset-prefix/ {{
-        proxy_pass http://127.0.0.1:4000;
+        proxy_pass http://127.0.0.1:8092;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_read_timeout 60s;
     }}
-    location = /favicon.ico {{ proxy_pass http://127.0.0.1:4000; }}
+    location = /favicon.ico {{ proxy_pass http://127.0.0.1:8092; }}
+    location = /login {{ proxy_pass http://127.0.0.1:8092; }}
+    location ^~ /sso/ {{ proxy_pass http://127.0.0.1:8092; }}
 {locations}
     location ~ ^/sub/(?<esmien_sub_token>[A-Za-z0-9_-]+)/?$ {{
         root /var/www/esmien-sub;
@@ -287,23 +290,26 @@ server {{
     error_log  /var/log/nginx/vpn-443.err;
 
     # Тот же нейтральный сайт, что и на основном HTTPS-входе.
-    # Прикрытие: вместо заглушки «Welcome» — страница входа LiteLLM (без бренда).
+    # Прикрытие: страница входа LiteLLM отдаётся из изолированной копии статики
+    # (127.0.0.1:8092). В рабочий LiteLLM (:4000) отсюда не уходит ни один запрос,
+    # а любой вход отбивается тем же 401, что отдаёт настоящая панель.
     location = / {{ return 302 /ui/; }}
     location ^~ /ui/ {{
-        limit_except GET HEAD {{ deny all; }}
-        proxy_pass http://127.0.0.1:4000;
+        proxy_pass http://127.0.0.1:8092;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Forwarded-For $remote_addr;
         proxy_read_timeout 60s;
     }}
     location ^~ /litellm-asset-prefix/ {{
-        proxy_pass http://127.0.0.1:4000;
+        proxy_pass http://127.0.0.1:8092;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_read_timeout 60s;
     }}
-    location = /favicon.ico {{ proxy_pass http://127.0.0.1:4000; }}
+    location = /favicon.ico {{ proxy_pass http://127.0.0.1:8092; }}
+    location = /login {{ proxy_pass http://127.0.0.1:8092; }}
+    location ^~ /sso/ {{ proxy_pass http://127.0.0.1:8092; }}
 
 {locations}
 
