@@ -78,7 +78,9 @@ def ru_node() -> str:
 
 
 def vless(uid: str, path: str, tag: str, addr: str = HOST, port: int = PORT) -> str:
-    query = {"type": "ws", "security": "tls", "sni": HOST, "host": HOST, "path": path, "encryption": "none"}
+    # fp/alpn — чтобы клиент по «сырой» ссылке ходил с отпечатком Chrome, а не Go-TLS.
+    query = {"type": "ws", "security": "tls", "sni": HOST, "host": HOST, "path": path,
+             "encryption": "none", "fp": "chrome", "alpn": "http/1.1"}
     return f"vless://{uid}@{addr}:{port}?" + urllib.parse.urlencode(query) + "#" + urllib.parse.quote(tag)
 
 
@@ -413,7 +415,8 @@ proxies:
 
     out = {"type": "vless", "tag": META_TAG, "server": HOST, "server_port": ws_port, "uuid": uid,
            "transport": {"type": "ws", "path": path, "headers": {"Host": HOST}},
-           "tls": {"enabled": True, "server_name": HOST}}
+           "tls": {"enabled": True, "server_name": HOST, "alpn": ["http/1.1"],
+                   "utls": {"enabled": True, "fingerprint": "chrome"}}}
     if r_link and not compat:
         outs = [sing_vision(uid)] if v_link else []
         match_tag = REALITY_TAG
@@ -500,7 +503,8 @@ rules:
     def sb_ours(name: str, path: str, addr: str = HOST) -> dict:
         return {"type": "vless", "tag": name, "server": addr, "server_port": PORT, "uuid": uid,
                 "transport": {"type": "ws", "path": path, "headers": {"Host": HOST}},
-                "tls": {"enabled": True, "server_name": HOST}}
+                "tls": {"enabled": True, "server_name": HOST, "alpn": ["http/1.1"],
+                        "utls": {"enabled": True, "fingerprint": "chrome"}}}
 
 
     sing = {"log": {"level": "warn"},
