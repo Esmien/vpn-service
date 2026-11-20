@@ -18,6 +18,14 @@ Hysteria через встроенный ACME DNS-01 выпускает отде
 Генератор `apply_brand.py` создаёт оба HTTPS-входа и SNI-маршруты. После применения
 проверить старые и новые VLESS и Hysteria2, страницы и три формата подписки.
 
+Панель статистики работает на `https://stats.esmien.com/` и параллельно на старом
+`https://stats.esmien.ru/`: оба vhost используют один htpasswd, статику, API и историю
+`/var/lib/vpn-stats/state.json`. Счётчики Xray привязаны к пользователям и выходам,
+а не к DNS-имени входа, поэтому один коллектор учитывает трафик обоих доменов.
+У `.com` отдельный сертификат `stats-esmien-com`; его vhost —
+`nginx/stats.esmien.com.conf`, восстановить в `/etc/nginx/conf.d/`. Выдаваемые API,
+CLI и панелью ссылки ведут на `https://share.esmien.com` (443).
+
 Домашний провайдер режет 443 и fake-TLS/MTProto, но пропускает настоящий TLS на
 нестандартных портах. Поэтому вход — VLESS+WS за nginx с сертификатом Let's Encrypt,
 а внешние выходы подключаются как outbound'ы Xray.

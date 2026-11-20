@@ -107,13 +107,11 @@ def apply_live() -> None:
 
 
 def url_of(token: str) -> str:
-    brand = json.loads((BASE / "brand.json").read_text())
-    return f"https://{brand['host']}:{brand['port']}/sub/{token}"
+    return f"https://share.esmien.com/sub/{token}"
 
 
 def page_of(token: str) -> str:
-    brand = json.loads((BASE / "brand.json").read_text())
-    return f"https://{brand['host']}:{brand['port']}/u/{token}"
+    return f"https://share.esmien.com/u/{token}"
 
 
 def new_token() -> str:

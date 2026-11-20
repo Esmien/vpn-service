@@ -27,9 +27,9 @@ def load_users() -> dict:
 def links(u: dict) -> dict:
     tok, lte = u.get("token", ""), u.get("token_lte", "")
     return {
-        "page": f"https://vpn.esmien.ru:8443/u/{tok}" if tok else "",
-        "sub": f"https://vpn.esmien.ru:8443/sub/{tok}" if tok else "",
-        "lte": f"https://vpn.esmien.ru:8443/sub/{lte}" if lte else "",
+        "page": f"https://share.esmien.com/u/{tok}" if tok else "",
+        "sub": f"https://share.esmien.com/sub/{tok}" if tok else "",
+        "lte": f"https://share.esmien.com/sub/{lte}" if lte else "",
     }
 
 

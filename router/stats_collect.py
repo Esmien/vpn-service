@@ -26,8 +26,8 @@ LABELS = {                       # display names only; state keys stay stable
 }
 WINDOW = 7 * 86400
 ROUTE_LABELS = {
-    "direct": "🇪🇪 Эстония (основной)",
-    "nl": "🇳🇱 Нидерланды (Gemini)",
+    "direct": "Эстония (основной)",
+    "nl": "Нидерланды (Gemini)",
     "fr": "Gemini (UI VPN)",
     "fi": "Gemini (UI VPN) — резерв",
     "p15": "UI VPN — Москва",
@@ -161,8 +161,7 @@ def page_links() -> dict:
         users = json.loads((BASE / "users.json").read_text())
     except (OSError, ValueError):
         return {}
-    brand = json.loads((BASE / "brand.json").read_text())
-    return {name: f"https://{brand['host']}:{brand['port']}/u/{u['token']}"
+    return {name: f"https://share.esmien.com/u/{u['token']}"
             for name, u in users.items() if u.get("token")}
 
 
