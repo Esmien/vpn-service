@@ -13,7 +13,6 @@ chk() {  # name, expected-regex, url-template...
 }
 
 echo "== сайты (через :443, default-ветка -> nginx :9443)"
-for h in ai.esmien.ru llm.esmien.ru app.esmien.ru mon.esmien.ru search.esmien.ru stats.esmien.ru; do
   chk "$h" '^(200|301|302|401|403|404)$' --resolve "$h:443:127.0.0.1" "https://$h/"
 done
 chk "bot.esmien.ru (webhook)" '^(200|401|403|404|405)$' --resolve "bot.esmien.ru:443:127.0.0.1" "https://bot.esmien.ru/"
