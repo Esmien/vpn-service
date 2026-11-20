@@ -68,8 +68,11 @@ def parse(stats: list) -> tuple[dict, dict]:
         kind, who, _, direction = parts[0], parts[1], parts[2], parts[3]
         val = int(s.get("value") or 0)
         if kind == "user":
-            name = who.split(":", 1)[-1] if ":" in who else LEGACY_KEY
-            users.setdefault(name, {"up": 0, "down": 0})["up" if direction == "uplink" else "down"] = val
+            # One person can hold a client in several inbounds, and every inbound
+            # keeps its own counter. Keying by name alone used to overwrite one
+            # counter with another and then count that foreign value as traffic.
+            inbound, name = (who.split(":", 1) if ":" in who else (who, LEGACY_KEY))
+            users.setdefault(name, {})[f"{inbound}:{direction}"] = val
         elif kind == "outbound":
             if who in SKIP_OUT:
                 continue
@@ -120,15 +123,19 @@ def main() -> int:
     for name, cur in users_now.items():
         rec = st["users"].setdefault(name, {"total": 0, "last": 0, "samples": []})
         delta = 0
-        for key in ("up", "down"):
-            ck = f"u:{name}:{key}"
-            prev = st["counters"].get(ck, 0)
-            if rebooted:
-                delta_add = 0
-            else:
-                delta_add = cur[key] - prev if cur[key] >= prev else cur[key]
-            st["counters"][ck] = cur[key]
-            delta += max(delta_add, 0)
+        for key, val in cur.items():
+            # The counter key carries the container and the inbound, so a value
+            # from another process or another inbound can never be mistaken for
+            # growth of this one.
+            ck = f"u:{container}:{name}:{key}"
+            prev = st["counters"].get(ck)
+            st["counters"][ck] = val
+            if prev is None or rebooted:
+                continue          # first sight or a fresh container: baseline only
+            if val >= prev:
+                delta += val - prev
+            # val < prev без смены контейнера значит, что счётчик обнулили: это
+            # тоже baseline, а не «вся накопленная величина разом».
         rec["total"] += delta
         if delta > 0:
             rec["last"] = now
@@ -136,12 +143,13 @@ def main() -> int:
         rec["samples"] = [s for s in rec["samples"] if now - s[0] <= WINDOW]
 
     for tag, cur in routes_now.items():
-        ck = f"r:{tag}"
-        prev = st["counters"].get(ck, 0)
-        add = 0 if rebooted else (cur - prev if cur >= prev else cur)
+        ck = f"r:{container}:{tag}"
+        prev = st["counters"].get(ck)
         st["counters"][ck] = cur
         key = label(tag)
-        st["routes"][key] = st["routes"].get(key, 0) + max(add, 0)
+        if prev is None or rebooted or cur < prev:
+            continue
+        st["routes"][key] = st["routes"].get(key, 0) + (cur - prev)
 
     st.pop("error", None)
     STATE.parent.mkdir(parents=True, exist_ok=True)
