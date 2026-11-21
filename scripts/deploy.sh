@@ -107,9 +107,7 @@ log "подписка"
 python3 "$ROUTER/make_sub.py" --new || python3 "$ROUTER/make_sub.py"
 
 log "проверка"
-for p in /general /france /fi; do
-  printf '  %-9s %s\n' "$p" "$(curl -sS -m 8 --resolve "$DOMAIN:8443:127.0.0.1" -o /dev/null -w '%{http_code}' "https://$DOMAIN:8443$p" || true)"
-done
+python3 -c 'import runpy; raise SystemExit(not runpy.run_path("/root/vpn-router/vpn-bluegreen.py")["probe_nginx"]())'
 echo "400 = вход ждёт WebSocket, это норма."
 echo
 echo "дальше: python3 $ROUTER/import_sub.py <sub-файл>   # подключить внешние выходы"

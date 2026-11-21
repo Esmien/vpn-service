@@ -214,14 +214,14 @@ def probe_direct(color: str, timeout: float = 1.5) -> tuple[int, int]:
 
 def probe_nginx() -> bool:
     brand = json.loads((BASE / "brand.json").read_text())
-    # VPN-порты больше не слушают 127.0.0.1: они привязаны к адресу edge (addresses.json).
+    # Проверяем публичный TCP/443 через адрес edge (addresses.json).
     try:
         target = json.loads((BASE / "addresses.json").read_text())["edge"]["ip"]
     except Exception:
         target = "127.0.0.1"
     # Проверяем ровно то, что опубликовано: старый /ws снят (RETIRED_PUBLIC в apply_brand.py),
     # основной узел подписки живёт на 443 по paths.public_general.
-    checks = [(brand["port"], "/general", "/general")]
+    checks = [(443, brand["paths"]["general"], "основной WS на 443")]
     public = brand["paths"].get("public_general")
     if public:
         checks.append((443, public, "публичный alias 443"))

@@ -10,6 +10,7 @@ check() {
   [[ $code == "$expected" ]]
 }
 check "$EDGE" "$HOST" 443 "$PUB" 400
-check "$EDGE" "$HOST" 8443 /general 400
+check "$EDGE" "$HOST" 443 /general 400
+check "$EDGE" "$HOST" 8443 / 000
 check "$EDGE" "$HOST" 443 /ws 404
 check "$EDGE" nosuch.invalid 443 / 000

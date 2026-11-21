@@ -2,7 +2,7 @@
   "brand": "Esmien VPN",
   "host": "share.esmien.com",
   "cert_dir": "/etc/letsencrypt/live/share-esmien-com",
-  "port": 8443,
+  "port": 443,
   "alt_port": 2087,
   "paths": {
     "owner": "/ws",
