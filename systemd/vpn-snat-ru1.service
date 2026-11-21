@@ -1,0 +1,13 @@
+[Unit]
+Description=SNAT our traffic to the owned RU exit (ru1) out of the edge address
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/sh -c '/usr/sbin/iptables -t nat -C POSTROUTING -d 217.197.114.197 -p tcp --dport 443 -j SNAT --to-source 85.92.158.238 2>/dev/null || /usr/sbin/iptables -t nat -A POSTROUTING -d 217.197.114.197 -p tcp --dport 443 -j SNAT --to-source 85.92.158.238'
+ExecStop=/bin/sh -c '/usr/sbin/iptables -t nat -D POSTROUTING -d 217.197.114.197 -p tcp --dport 443 -j SNAT --to-source 85.92.158.238 2>/dev/null || true'
+
+[Install]
+WantedBy=multi-user.target
