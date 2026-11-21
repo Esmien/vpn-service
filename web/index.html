@@ -47,7 +47,7 @@
     table.users th { padding: 6px 2px; font-size: 9.5px; letter-spacing: 0; }
     table.users td:first-child { max-width: none; }
     .copy-row, .re, .del { font-size: 10px; padding: 4px 5px; }
-    .rows .row { grid-template-columns: 1.5em minmax(0,1fr) auto; display: grid; gap: 8px; }
+    .rows .row { font-size: 15px; column-gap: 9px; padding: 9px 2px; }
   }
 
   th:not(:first-child) { text-align: right; }
@@ -101,6 +101,33 @@
     border: 1px solid #2c3546; background: transparent; color: #8fb7ff; font-family: inherit;
   }
   .re:hover { border-color: #33456b; background: #1a2233; }
+
+  /* блок «Маршруты» */
+  .rows { margin-top: 2px; }
+  .rows .row {
+    display: grid; grid-template-columns: 1.6em minmax(0, 1fr) auto;
+    align-items: center; column-gap: 12px;
+    padding: 11px 4px 11px 2px;
+    border-bottom: 1px solid #1b2029;
+    font-size: 17px; line-height: 1.35;
+  }
+  .rows .row:last-child { border-bottom: none; }
+  .rows .row .ic { display: flex; align-items: center; }
+  .rows .row .nm {
+    min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    color: #e6e8ee;
+  }
+  .rows .row .v {
+    justify-self: end; color: #6fc6ff;
+    font-variant-numeric: tabular-nums; font-weight: 600; letter-spacing: .01em;
+  }
+  @supports ((-webkit-background-clip: text) or (background-clip: text)) {
+    .rows .row .v {
+      background: linear-gradient(180deg, #a9e3ff 0%, #62c0ff 52%, #3f9ef6 100%);
+      -webkit-background-clip: text; background-clip: text;
+      color: transparent; -webkit-text-fill-color: transparent;
+    }
+  }
 </style>
 </head>
 <body>
@@ -178,7 +205,7 @@ const GEM = '<svg class="gem" viewBox="0 0 24 24"><defs><linearGradient id="gg" 
   + '<path fill="url(#gg)" d="M12 0c.7 4.6 2.4 8.1 5 9.7 1.5.9 3.6 1.4 7 1.6v1.4c-3.4.2-5.5.7-7 1.6-2.6 1.6-4.3 5.1-5 9.7h-.1c-.7-4.6-2.4-8.1-5-9.7-1.4-.9-3.5-1.4-6.9-1.6v-1.4c3.4-.2 5.5-.7 6.9-1.6C9.6 8.1 11.3 4.6 12 0z"/></svg>';
 const iconFor = l => l.startsWith('Gemini') ? GEM
   : l.startsWith('Нидерланды') ? FLAGS.NL
-  : (l.startsWith('UI VPN') || l.startsWith('RU-')) ? FLAGS.RU
+  : (l.startsWith('UI VPN') || /^ru\d+$/i.test(l)) ? FLAGS.RU
   : l.startsWith('Эстония') ? FLAGS.EE : '';
 
 const paint = (d) => {
@@ -199,9 +226,13 @@ const paint = (d) => {
   document.getElementById("users").innerHTML = rows.join("") ||
     '<tr><td colspan="6" class="zero">данных пока нет</td></tr>';
 
+  // Ру-маршруты идут отдельной группой внизу, внутри группы — по убыванию трафика.
+  const isRu = l => l.startsWith('UI VPN') || /^ru\d+$/i.test(l);
   const routeRow = r => '<div class="row"><span class="ic">' + iconFor(r.label) + '</span>'
-    + '<span>' + r.label + '</span><span class="v">' + fmt(r.total) + '</span></div>';
-  document.getElementById("routes").innerHTML = d.routes.map(routeRow).join("")
+    + '<span class="nm">' + r.label + '</span><span class="v">' + fmt(r.total) + '</span></div>';
+  document.getElementById("routes").innerHTML = d.routes.slice()
+    .sort((a, b) => (isRu(a.label) - isRu(b.label)) || (b.total - a.total))
+    .map(routeRow).join("")
     || '<div class="row zero">данных пока нет</div>';
 
   const silent = d.users.filter(u => !u.total).map(u => u.name);
