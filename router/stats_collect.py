@@ -30,9 +30,18 @@ ROUTE_LABELS = {
     "nl": "Нидерланды (Gemini)",
     "fr": "Gemini (UI VPN)",
     "fi": "Gemini (UI VPN) — резерв",
-    "p15": "UI VPN — Москва",
-    "p17": "UI VPN — Новосибирск",
-    "ru": "RU-хост",
+    "p15": "Москва (UI VPN)",
+    "p17": "Новосибирск (UI VPN)",
+    "ru1": "Москва (НАШ)",
+    "ru": "Москва (НАШ) — резерв",
+}
+# Подписи маршрутов переименованы в формат «Город (чье)»; state ключуется подписью,
+# поэтому старые ключи надо слить с новыми, иначе накопленный итог обнулится.
+RENAMED = {
+    "UI VPN — Москва": "Москва (UI VPN)",
+    "UI VPN — Новосибирск": "Новосибирск (UI VPN)",
+    "ru1": "Москва (НАШ)",
+    "RU-хост": "Москва (НАШ) — резерв",
 }
 SKIP_OUT = {"blocked", "api", "warp"}
 
@@ -103,6 +112,11 @@ def main() -> int:
         "routes": state.get("routes", {}),
         "updated": now,
     }
+
+    # Миграция старых подписей маршрутов: суммы складываются, ключ уходит.
+    for old, new in RENAMED.items():
+        if old in st["routes"]:
+            st["routes"][new] = st["routes"].get(new, 0) + st["routes"].pop(old)
 
     try:
         users_now, routes_now = parse(query(port))

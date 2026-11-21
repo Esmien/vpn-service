@@ -23,6 +23,9 @@
   th, td { text-align: right; padding: 9px 10px; border-bottom: 1px solid #1d222c; }
   th:first-child, td:first-child { text-align: left; }
   th { font-size: 12px; color: #77809a; font-weight: 500; text-transform: uppercase; letter-spacing: .05em; }
+  .srt { font-size: 9px; color: #5a6274; vertical-align: 1px; }
+  /* граница групп: сначала те, у кого есть трафик за сутки, ниже — остальные */
+  table.users tr.gap td { padding: 0; height: 12px; border-bottom: 1px solid #1b2029; }
   td { font-variant-numeric: tabular-nums; }
   svg.gem { width: 1.05em; height: 1.05em; vertical-align: -0.16em;
             margin-right: .38em; filter: drop-shadow(0 0 6px rgba(145,119,199,.35)); }
@@ -146,7 +149,7 @@
   <h2>Люди</h2>
   <div class="tw"><table class="users">
     <thead>
-      <tr><th>Человек</th><th>24 ч</th><th>7 дней</th><th>Всего</th><th>Последнее</th><th></th></tr>
+      <tr><th>Человек</th><th>24 ч <span class="srt">▼</span></th><th>7 дней</th><th>Всего</th><th>Последнее</th><th></th></tr>
     </thead>
     <tbody id="users"></tbody>
   </table></div>
@@ -203,9 +206,11 @@ const GEM = '<svg class="gem" viewBox="0 0 24 24"><defs><linearGradient id="gg" 
   + '<stop offset="0" stop-color="#4796E3"/><stop offset=".52" stop-color="#9177C7"/>'
   + '<stop offset="1" stop-color="#D96570"/></linearGradient></defs>'
   + '<path fill="url(#gg)" d="M12 0c.7 4.6 2.4 8.1 5 9.7 1.5.9 3.6 1.4 7 1.6v1.4c-3.4.2-5.5.7-7 1.6-2.6 1.6-4.3 5.1-5 9.7h-.1c-.7-4.6-2.4-8.1-5-9.7-1.4-.9-3.5-1.4-6.9-1.6v-1.4c3.4-.2 5.5-.7 6.9-1.6C9.6 8.1 11.3 4.6 12 0z"/></svg>';
+// Маршруты подписаны как «Город (чье)»: (UI VPN) — релей провайдера, (НАШ) — свой выход.
+const isRu = l => /\((UI VPN|НАШ)\)/.test(l) && !l.startsWith('Gemini');
 const iconFor = l => l.startsWith('Gemini') ? GEM
   : l.startsWith('Нидерланды') ? FLAGS.NL
-  : (l.startsWith('UI VPN') || /^ru\d+$/i.test(l)) ? FLAGS.RU
+  : isRu(l) ? FLAGS.RU
   : l.startsWith('Эстония') ? FLAGS.EE : '';
 
 const paint = (d) => {
@@ -216,18 +221,26 @@ const paint = (d) => {
   if (d.error) document.getElementById("err").innerHTML =
     '<div class="err">последний опрос не удался: ' + d.error + "</div>";
 
-  const rows = d.users.map(u => {
+  // Сортировка та же, что у маршрутов: по суточному расходу, у кого за сутки нуля —
+  // отдельной группой ниже, за разделителем.
+  const us = d.users.slice().sort((a, b) => (b.h24 - a.h24) || (b.d7 - a.d7) || (b.total - a.total));
+  const rows = [];
+  let gap = false;
+  for (const u of us) {
+    if (!gap && !(u.h24 > 0)) {
+      rows.push('<tr class="gap"><td colspan="6"></td></tr>');
+      gap = true;
+    }
     const cls = u.total > 0 ? (u.h24 > 0 ? "live" : "idle") : "zero";
     const mark = u.total > 0 ? (u.h24 > 0 ? "" : " *") : "";
-    return "<tr><td>" + u.name + "</td><td>" + fmt(u.h24) + "</td><td>" + fmt(u.d7) +
+    rows.push("<tr><td>" + u.name + "</td><td>" + fmt(u.h24) + "</td><td>" + fmt(u.d7) +
       '</td><td class="' + cls + '">' + fmt(u.total) + mark + "</td><td>" + ago(u.last) +
-      '</td><td class="act">' + actCell(u) + '</td></tr>';
-  });
+      '</td><td class="act">' + actCell(u) + '</td></tr>');
+  }
   document.getElementById("users").innerHTML = rows.join("") ||
     '<tr><td colspan="6" class="zero">данных пока нет</td></tr>';
 
   // Ру-маршруты идут отдельной группой внизу, внутри группы — по убыванию трафика.
-  const isRu = l => l.startsWith('UI VPN') || /^ru\d+$/i.test(l);
   const routeRow = r => '<div class="row"><span class="ic">' + iconFor(r.label) + '</span>'
     + '<span class="nm">' + r.label + '</span><span class="v">' + fmt(r.total) + '</span></div>';
   document.getElementById("routes").innerHTML = d.routes.slice()
