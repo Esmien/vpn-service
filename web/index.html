@@ -255,7 +255,7 @@ const paint = (d) => {
   // единственная цифра — аккаунтный расход из заголовка подписки.
   const wl = (d.provider || []).find(p => p.key === "whitelist");
   document.getElementById("prov").innerHTML = wl && wl.used
-    ? "белый список: <b>" + fmt(wl.used) + "</b>"
+    ? "Белый список: <b>" + fmt(wl.used) + "</b>"
       + (wl.total ? " из " + fmt(wl.total) : " · без лимита") + " · счётчик провайдера"
     : "";
 
