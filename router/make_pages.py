@@ -175,7 +175,9 @@ ICON_LTE = """<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentCo
 
 
 def sub_url(token: str) -> str:
-    return f"https://{BRAND['host']}:{BRAND['port']}/sub/{token}"
+    port = BRAND.get("sub_port", BRAND["port"])
+    authority = BRAND["host"] if port == 443 else f"{BRAND['host']}:{port}"
+    return f"https://{authority}/sub/{token}"
 
 
 def kind_of(token: str) -> str:

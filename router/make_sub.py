@@ -20,6 +20,8 @@ from pathlib import Path
 _BRAND = json.loads(Path("/root/vpn-router/brand.json").read_text())
 HOST = _BRAND["host"]
 PORT = _BRAND["port"]
+SUB_PORT = _BRAND.get("sub_port", PORT)
+SUB_AUTHORITY = HOST if SUB_PORT == 443 else f"{HOST}:{SUB_PORT}"
 ROOT = Path("/var/www/esmien-sub")
 UID_FILE = Path("/root/.secrets/ws-client-uuid")
 RELAY_FILE = Path("/root/vpn-router/relay_nodes.json")
@@ -124,7 +126,7 @@ def vless_vision(uid: str, tag: str = VISION_TAG, addr: str = IP) -> str:
     """VLESS+Vision+TLS на нашем собственном домене.
 
     Камо-домен на нашем IP — это несовпадение SNI и адреса, которое ТСПУ ловит первым
-    делом (соединение живёт минуту и замерзает). Здесь SNI `vpn.esmien.ru` действительно
+    делом (соединение живёт минуту и замерзает). Здесь SNI `текущего входа` действительно
     указывает на этот IP: придраться не к чему, а Vision скрывает TLS-in-TLS.
     """
     query = {"type": "tcp", "security": "tls", "sni": VISION_HOST, "fp": "chrome",
@@ -534,7 +536,7 @@ def main() -> int:
         target.mkdir(parents=True, exist_ok=True)
         (target / "kind").write_text("whitelist\n")
         build_whitelist(target, uid)
-        print(f"https://{HOST}:{PORT}/sub/{token}")
+        print(f"https://{SUB_AUTHORITY}/sub/{token}")
         return 0
     if "--new" in sys.argv or not any(ROOT.iterdir() if ROOT.is_dir() else []):
         import secrets
@@ -543,11 +545,11 @@ def main() -> int:
         target = ROOT / token
         target.mkdir(exist_ok=True)
         build(target, uid)
-        print(f"https://{HOST}:{PORT}/sub/{token}")
+        print(f"https://{SUB_AUTHORITY}/sub/{token}")
         return 0
     for target in sorted(p for p in ROOT.iterdir() if p.is_dir() and not p.name.startswith(".")):
         build(target, token_uid(target))
-        print(f"https://{HOST}:{PORT}/sub/{target.name}")
+        print(f"https://{SUB_AUTHORITY}/sub/{target.name}")
     return 0
 
 

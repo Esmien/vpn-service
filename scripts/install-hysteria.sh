@@ -10,7 +10,7 @@
 set -euo pipefail
 
 HY_VERSION="${HY_VERSION:-app/v2.14.0}"
-DOMAIN="${DOMAIN:-vpn.esmien.ru}"
+DOMAIN="${DOMAIN:-share.esmien.com}"
 CF_INI="${CF_INI:-/root/.secrets/cf-esmien-com.ini}"
 CONF=/etc/hysteria/config.yaml
 SECRETS=/root/.secrets/hysteria-owner.txt

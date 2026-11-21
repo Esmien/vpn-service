@@ -26,7 +26,7 @@ ROOT = Path("/root/vpn-router")
 SUBS = Path("/var/www/esmien-sub")
 HY_CFG = Path("/etc/hysteria/config.yaml")
 STATE = Path("/root/.secrets/hysteria-users.json")
-HOST = "vpn.esmien.ru"
+HOST = json.loads(Path("/root/vpn-router/brand.json").read_text())["host"]
 PORT = 8443
 NODE = "🇪🇪 Эстония (запасной)"
 

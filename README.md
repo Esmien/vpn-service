@@ -1,27 +1,23 @@
 # VPN: VLESS over WebSocket + TLS (вход) -> внешние выходы
 
-## Параллельный домен
+## Публичный вход
 
-`vpn.esmien.ru` и `share.esmien.com` работают одновременно. Старые страницы и подписки
-не меняются; новые страницы имеют тот же `/u/<token>` на `share.esmien.com:443`.
-Локальный `vpn-parallel-domain.service` читает исходные страницы и подписки и заменяет
-имя при выдаче; токены и права пользователей не меняются, удалённые файлы сразу исчезают
-и с нового домена. Сервис слушает только 127.0.0.1:18744.
+`share.esmien.com`: VLESS+WS, личные страницы `/u/<token>` и подписки `/sub/<token>`
+на TCP/443; Hysteria2 на UDP/8443. Подписки в трёх форматах и страницы nginx
+отдаёт напрямую из `/var/www/esmien-sub` и `/var/www/esmien-pages`.
+`brand.json` задаёт имя, сертификат и `sub_port`; `apply_brand.py` строит
+nginx-конфиги и SNI-карту. TCP/8443 сохраняет совместимость для этого же имени;
+внешний фильтр закрывает TCP/2087 и 4443 на адресе VPN.
 
-Восстановление: выпустить DNS-01 сертификат `share-esmien-com` только на `share.esmien.com`
-с учётными данными `/root/.secrets/cf-esmien-com.ini`; установить `router/parallel_domain.py`
-в `/root/vpn-router/`, `systemd/vpn-parallel-domain.service` в `/etc/systemd/system/`,
-выполнить `systemctl daemon-reload` и `systemctl enable --now vpn-parallel-domain`.
-Hysteria через встроенный ACME DNS-01 выпускает отдельный сертификат на каждый домен
-и выбирает его по SNI; настройка есть в `hysteria/config.example.yaml`. Токен Cloudflare
-в живом `/etc/hysteria/config.yaml` — секрет и не должен попадать в репозиторий.
-Генератор `apply_brand.py` создаёт оба HTTPS-входа и SNI-маршруты. После применения
-проверить старые и новые VLESS и Hysteria2, страницы и три формата подписки.
+При восстановлении существующего хоста сохранить сертификат nginx `share-esmien-com`
+или выпустить его через DNS-01, используя `/root/.secrets/cf-esmien-com.ini`.
+Hysteria выпускает собственный сертификат через ACME DNS-01 на то же имя;
+шаблон — `hysteria/config.example.yaml`. Токен в живом конфиге не копировать в git.
 
 Панель статистики работает только на `https://stats.esmien.com/` и использует один htpasswd, статику, API и историю
 `/var/lib/vpn-stats/state.json`. Счётчики Xray привязаны к пользователям и выходам,
-а не к DNS-имени входа, поэтому один коллектор учитывает трафик обоих доменов.
-Панель закрыта на уровне nginx: обе площадки пускают только `85.92.158.238`
+а не к DNS-имени входа, поэтому один коллектор учитывает трафик обоих транспортов.
+Панель закрыта на уровне nginx: панель пускает только `85.92.158.238`
 (наш edge, то есть клиентов внутри туннеля) и `127.0.0.1`, остальным — `444` без ответа.
 Чтобы панель открывалась с любого устройства, в `config.json` есть правило
 `domain:stats.esmien.{com,ru} -> direct`: маршрут через NL/Gemini сюда не пускают.
@@ -35,10 +31,10 @@ CLI и панелью ссылки ведут на `https://share.esmien.com` (4
 
 ## Схема
 
-    клиент -> nginx (TLS, 8443 / 2087) -> xray vpn-router (VLESS+WS, 127.0.0.1:1008x)
+    клиент -> nginx (TLS, TCP/443) -> xray vpn-router (VLESS+WS, 127.0.0.1:1008x)
            -> outbound: наш выход (direct) / внешний узел (p1..p23) / fr / fi
 
-- 8443 — основной вход, 2087 — резервный.
+- TCP/443 — основной вход, UDP/8443 — резервный транспорт.
 - `vpn-router` — контейнер xray-core с `--network host`, конфиг `/root/vpn-router/config.json`.
 - TLS терминирует nginx; Xray слушает только loopback.
 - 3x-ui в схеме не участвует: панель не умеет описывать цепочки «вход → конкретный выход».
