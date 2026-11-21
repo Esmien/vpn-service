@@ -12,13 +12,16 @@ Output: /var/www/vpn-stats/data.json    (what the page fetches)
 import json
 import subprocess
 import time
+import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
 BASE = Path("/root/vpn-router")
 STATE = Path("/var/lib/vpn-stats/state.json")
 OUT = Path("/var/www/vpn-stats/data.json")
+SUBS = BASE / "subs.json"
 XRAY = "/usr/local/bin/xray"
+UA = "Happ/2.11.0"
 LEGACY_KEY = "@legacy"          # bare client (email == inbound tag) = main shared key
 LABELS = {                       # display names only; state keys stay stable
     LEGACY_KEY: "общий ключ (без имени)",
@@ -118,6 +121,9 @@ def main() -> int:
         if old in st["routes"]:
             st["routes"][new] = st["routes"].get(new, 0) + st["routes"].pop(old)
 
+    # Счётчик провайдера обновляем каждый прогон; недоступен — держим прошлый.
+    st["provider"] = provider_usage() or st.get("provider", {})
+
     try:
         users_now, routes_now = parse(query(port))
     except Exception as exc:  # keep the previous picture instead of blanking the page
@@ -177,6 +183,46 @@ def mb(n: float) -> float:
     return round(n / 1048576, 2)
 
 
+def provider_usage() -> dict:
+    """Расход по подписке провайдера из заголовка `subscription-userinfo`.
+
+    По белому списку это единственная цифра вообще: клиент в таком режиме
+    ходит на узлы провайдера напрямую, поэтому ни `user>>>`, ни `outbound>>>`
+    его трафик не видят. Счётчик аккаунтный: не по маршрутам и не по людям.
+    """
+    out = {}
+    try:
+        subs = json.loads(SUBS.read_text())
+    except (OSError, ValueError):
+        return out
+    for item in subs:
+        name, url = item.get("name", ""), item.get("url", "")
+        if not url:
+            continue
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": UA})
+            with urllib.request.urlopen(req, timeout=20) as resp:
+                info = resp.headers.get("subscription-userinfo", "")
+        except Exception:
+            continue
+        vals = {}
+        for part in info.split(";"):
+            key, _, val = part.partition("=")
+            key, val = key.strip(), val.strip()
+            if key and val.isdigit():
+                vals[key] = int(val)
+        if not vals:
+            continue
+        slot = "whitelist" if "глушил" in name.lower() else "relays"
+        out[slot] = {
+            "name": name,
+            "used": vals.get("download", 0) + vals.get("upload", 0),
+            "total": vals.get("total", 0),
+            "expire": vals.get("expire", 0),
+        }
+    return out
+
+
 def page_links() -> dict:
     """token -> /u/ page, so the dashboard can hand out links in one click."""
     try:
@@ -209,6 +255,9 @@ def render(st: dict) -> dict:
     users.sort(key=lambda u: (-u["h24"], -u["d7"]))
     routes = [{"tag": t, "label": t, "total": mb(v)} for t, v in st["routes"].items() if v > 0]
     routes.sort(key=lambda r: -r["total"])
+    provider = [{"key": k, "name": v.get("name", ""), "used": mb(v.get("used", 0)),
+                 "total": mb(v.get("total", 0)), "expire": v.get("expire", 0)}
+                for k, v in st.get("provider", {}).items()]
     return {
         "generated_at": now,
         "since": st["since"],
@@ -216,6 +265,7 @@ def render(st: dict) -> dict:
         "color": (BASE / "vpn-color").read_text().strip(),
         "users": users,
         "routes": routes,
+        "provider": provider,
         "error": st.get("error", ""),
     }
 

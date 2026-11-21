@@ -61,6 +61,8 @@
   .err { margin: 0 0 18px; padding: 10px 12px; border-radius: 8px;
          background: #3a1f22; color: #ffb4b4; font-size: 13px; }
   .foot { margin-top: 28px; color: #5a6274; font-size: 12px; }
+  .prov { margin-top: 10px; color: #5a6274; font-size: 13px; }
+  .prov b { color: #a8c0e0; font-weight: 600; font-variant-numeric: tabular-nums; }
   .gen { display: flex; gap: 8px; margin-bottom: 12px; }
   .gen input {
     flex: 1; min-width: 0; padding: 9px 11px; border-radius: 8px;
@@ -156,6 +158,7 @@
 
   <h2>Маршруты</h2>
   <div class="rows" id="routes"></div>
+  <div class="prov" id="prov"></div>
 
   <div class="foot" id="foot"></div>
 </div>
@@ -247,6 +250,14 @@ const paint = (d) => {
     .sort((a, b) => (isRu(a.label) - isRu(b.label)) || (b.total - a.total))
     .map(routeRow).join("")
     || '<div class="row zero">данных пока нет</div>';
+
+  // Белый список ходит на узлы провайдера напрямую — наши счётчики его не видят,
+  // единственная цифра — аккаунтный расход из заголовка подписки.
+  const wl = (d.provider || []).find(p => p.key === "whitelist");
+  document.getElementById("prov").innerHTML = wl && wl.used
+    ? "белый список: <b>" + fmt(wl.used) + "</b>"
+      + (wl.total ? " из " + fmt(wl.total) : " · без лимита") + " · счётчик провайдера"
+    : "";
 
   const silent = d.users.filter(u => !u.total).map(u => u.name);
   document.getElementById("foot").textContent = silent.length
