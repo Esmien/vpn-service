@@ -413,7 +413,7 @@
     "network": "tcp",
     "security": "reality",
     "realitySettings": {
-     "serverName": "www.microsoft.com",
+     "serverName": "tech.esmien.ru",
      "fingerprint": "chrome",
      "publicKey": "EPasaAZnnOKbV75cPSaoC6nNPw0Zryyc53xag3Y7gic",
      "shortId": "bbebe14aa312a5e3",
