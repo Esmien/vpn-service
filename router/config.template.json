@@ -390,6 +390,36 @@
      "domainStrategy": "UseIPv4"
     }
    }
+  },
+  {
+   "tag": "ru1",
+   "protocol": "vless",
+   "settings": {
+    "vnext": [
+     {
+      "address": "217.197.114.197",
+      "port": 443,
+      "users": [
+       {
+        "id": "<VLESS_UUID>",
+        "encryption": "none",
+        "flow": ""
+       }
+      ]
+     }
+    ]
+   },
+   "streamSettings": {
+    "network": "tcp",
+    "security": "reality",
+    "realitySettings": {
+     "serverName": "vpn.esmien.ru",
+     "fingerprint": "chrome",
+     "publicKey": "EPasaAZnnOKbV75cPSaoC6nNPw0Zryyc53xag3Y7gic",
+     "shortId": "bbebe14aa312a5e3",
+     "spiderX": "/"
+    }
+   }
   }
  ],
  "routing": {
@@ -522,7 +552,8 @@
   "subjectSelector": [
    "fr",
    "p15",
-   "p17"
+   "p17",
+   "ru1"
   ],
   "probeUrl": "https://cp.cloudflare.com/generate_204",
   "probeInterval": "30s",

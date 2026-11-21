@@ -24,7 +24,7 @@ GROUPS = {
     # Gemini goes out through the French relay: phone works on it. Estonia shows the
     # "not supported in your country" stub, FI does not load the page at all.
     GOOGLE_GROUP: ["fr"],
-    RU_GROUP: ["p15", "p17"],
+    RU_GROUP: ["ru1", "p15", "p17"],
 }
 
 # Native xray failover. The balancer only holds one node per group, so when that node
@@ -37,7 +37,7 @@ FALLBACK = {GOOGLE_GROUP: "fi", RU_GROUP: "direct"}
 # Ordered preference used by the watchdog when it prunes/restores a group.
 PREFERENCE = {
     GOOGLE_GROUP: ["fr"],
-    RU_GROUP: ["p15", "p17", "direct"],
+    RU_GROUP: ["ru1", "p15", "p17", "direct"],
 }
 
 # Google falls back to a single node; RU keeps the whole pool in the balancer and lets
