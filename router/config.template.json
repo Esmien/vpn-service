@@ -413,13 +413,14 @@
     "network": "tcp",
     "security": "reality",
     "realitySettings": {
-     "serverName": "vpn.esmien.ru",
+     "serverName": "www.microsoft.com",
      "fingerprint": "chrome",
      "publicKey": "EPasaAZnnOKbV75cPSaoC6nNPw0Zryyc53xag3Y7gic",
      "shortId": "bbebe14aa312a5e3",
      "spiderX": "/"
     }
-   }
+   },
+   "sendThrough": "85.92.158.238"
   }
  ],
  "routing": {
@@ -538,6 +539,7 @@
    {
     "tag": "bal-ru",
     "selector": [
+     "ru1",
      "p15",
      "p17"
     ],
