@@ -23,7 +23,10 @@
   th, td { text-align: right; padding: 9px 10px; border-bottom: 1px solid #1d222c; }
   th:first-child, td:first-child { text-align: left; }
   th { font-size: 12px; color: #77809a; font-weight: 500; text-transform: uppercase; letter-spacing: .05em; }
-  .srt { font-size: 9px; color: #5a6274; vertical-align: 1px; }
+  .srt { font-size: 9px; color: #9ba4b8; }
+  th.sh { cursor: pointer; user-select: none; -webkit-user-select: none; }
+  th.sh:hover { color: #cfd6e6; }
+  th.sh.on { color: #cfd6e6; }
   /* граница групп: сначала те, у кого есть трафик за сутки, ниже — остальные */
   table.users tr.gap td { padding: 0; height: 12px; border-bottom: 1px solid #1b2029; }
   td { font-variant-numeric: tabular-nums; }
@@ -151,7 +154,7 @@
   <h2>Люди</h2>
   <div class="tw"><table class="users">
     <thead>
-      <tr><th>Человек</th><th>24 ч <span class="srt">▼</span></th><th>7 дней</th><th>Всего</th><th>Последнее</th><th></th></tr>
+      <tr><th class="sh" data-key="name">Человек<span class="srt"></span></th><th class="sh" data-key="h24">24 ч<span class="srt"></span></th><th class="sh" data-key="d7">7 дней<span class="srt"></span></th><th class="sh" data-key="total">Всего<span class="srt"></span></th><th class="sh" data-key="last">Последнее<span class="srt"></span></th><th></th></tr>
     </thead>
     <tbody id="users"></tbody>
   </table></div>
@@ -216,7 +219,37 @@ const iconFor = l => l.startsWith('Gemini') ? GEM
   : isRu(l) ? FLAGS.RU
   : l.startsWith('Эстония') ? FLAGS.EE : '';
 
+// Сортировка таблицы людей: клик по заголовку, повторный клик — разворот.
+// Выбор запоминается, иначе F5 каждый раз возвращает «по суткам».
+let lastData = null;
+let sortState = { key: "h24", dir: -1 };
+try {
+  const saved = JSON.parse(localStorage.getItem("usersSort") || "null");
+  if (saved && ["name", "h24", "d7", "total", "last"].includes(saved.key)
+      && (saved.dir === 1 || saved.dir === -1)) sortState = saved;
+} catch (e) { /* приватный режим — просто без памяти */ }
+
+const sortMarks = () => {
+  document.querySelectorAll("th.sh").forEach(th => {
+    const on = th.dataset.key === sortState.key;
+    th.classList.toggle("on", on);
+    th.querySelector(".srt").textContent = on ? (sortState.dir < 0 ? " ▼" : " ▲") : "";
+  });
+};
+sortMarks();
+
+document.querySelector("table.users thead").addEventListener("click", (e) => {
+  const th = e.target.closest("th.sh");
+  if (!th) return;
+  const key = th.dataset.key;
+  sortState = { key, dir: sortState.key === key ? -sortState.dir : -1 };
+  try { localStorage.setItem("usersSort", JSON.stringify(sortState)); } catch (err) {}
+  sortMarks();
+  if (lastData) paint(lastData);
+});
+
 const paint = (d) => {
+  lastData = d;
   document.getElementById("meta").innerHTML =
     "обновлено <b>" + dt(d.updated) + "</b> · сбор с <b>" + dt(d.since) +
     "</b> · активный цвет <b>" + d.color + "</b>";
@@ -224,13 +257,16 @@ const paint = (d) => {
   if (d.error) document.getElementById("err").innerHTML =
     '<div class="err">последний опрос не удался: ' + d.error + "</div>";
 
-  // Сортировка та же, что у маршрутов: по суточному расходу, у кого за сутки нуля —
-  // отдельной группой ниже, за разделителем.
-  const us = d.users.slice().sort((a, b) => (b.h24 - a.h24) || (b.d7 - a.d7) || (b.total - a.total));
+  // Клик по заголовку сортирует таблицу; выбор запоминается в localStorage.
+  const key = sortState.key, dir = sortState.dir;
+  const us = d.users.slice().sort((a, b) => {
+    if (key === "name") return dir * a.name.localeCompare(b.name, "ru");
+    return dir * (a[key] - b[key]) || (b.total - a.total) || a.name.localeCompare(b.name, "ru");
+  });
   const rows = [];
   let gap = false;
   for (const u of us) {
-    if (!gap && !(u.h24 > 0)) {
+    if (!gap && key === "h24" && dir < 0 && !(u.h24 > 0)) {
       rows.push('<tr class="gap"><td colspan="6"></td></tr>');
       gap = true;
     }
