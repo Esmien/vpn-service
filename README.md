@@ -25,6 +25,13 @@ Hysteria выпускает собственный сертификат чере
 `nginx/stats.esmien.com.conf`, восстановить в `/etc/nginx/conf.d/`. Выдаваемые API,
 CLI и панелью ссылки ведут на `https://share.esmien.com` (443).
 
+Исходник панели — `web/admin_panel/index.html`. При согласованной выкладке
+он копируется в `/var/www/vpn-stats/index.html`; адрес панели и относительные
+запросы к `data.json` и на `/api/` не меняются. Изменения интерфейса делать в
+репозитории, а не в `/var/www`. Исходник действующего API —
+`router/admin/subgen_api.py`; установщик кладёт его в прежний
+`/root/vpn-router/subgen_api.py`, поэтому `vpn-subgen.service` не меняется.
+
 Домашний провайдер режет 443 и fake-TLS/MTProto, но пропускает настоящий TLS на
 нестандартных портах. Поэтому вход — VLESS+WS за nginx с сертификатом Let's Encrypt,
 а внешние выходы подключаются как outbound'ы Xray.

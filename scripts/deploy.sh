@@ -33,6 +33,7 @@ apt-get install -y -qq nginx libnginx-mod-stream certbot python3-certbot-nginx p
 log "каталоги и скрипты"
 mkdir -p "$ROUTER" "$WEB" /var/www/html
 install -m 755 "$ASSETS"/router/*.py "$ROUTER"/
+install -m 755 "$ASSETS"/router/admin/subgen_api.py "$ROUTER/subgen_api.py"
 install -m 755 "$ASSETS"/scripts/vpn-cfg /usr/local/bin/vpn-cfg
 [ -f "$ROUTER/brand.json" ] || install -m 644 "$ASSETS"/router/brand.json "$ROUTER"/brand.json
 mkdir -p /root/mtproto-faketls
