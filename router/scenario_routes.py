@@ -32,12 +32,12 @@ GROUPS = {
 # keeps the group alive, and xray does it himself in ~30–60 s (probeInterval), without
 # rewriting configs or restarting a container. This is the real fallback; the watchdog
 # only writes a draft and no longer applies anything.
-FALLBACK = {GOOGLE_GROUP: "fi", RU_GROUP: "direct"}
+FALLBACK = {GOOGLE_GROUP: "fi", RU_GROUP: "p15"}
 
 # Ordered preference used by the watchdog when it prunes/restores a group.
 PREFERENCE = {
     GOOGLE_GROUP: ["fr"],
-    RU_GROUP: ["ru1", "p15", "p17", "direct"],
+    RU_GROUP: ["ru1", "p15"],
 }
 
 # Google falls back to a single node; RU keeps the whole pool in the balancer and lets
@@ -139,6 +139,9 @@ def install(cfg: dict) -> dict:
 def main() -> int:
     cfg = json.loads(CONFIG.read_text())
     cmd = sys.argv[1] if len(sys.argv) > 1 else "install"
+    if (BASE / 'policy.json').exists() and cmd in ('install', 'set-selector'):
+        print('маршрутами управляет админка', file=sys.stderr)
+        return 1
 
     if cmd == "install":
         install(cfg)

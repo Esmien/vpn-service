@@ -136,6 +136,13 @@
       color: transparent; -webkit-text-fill-color: transparent;
     }
   }
+  .route-group > summary { cursor: pointer; list-style: none; padding: 10px 0; }
+  .route-group > summary::-webkit-details-marker { display: none; }
+  .route-group > summary::before { content: '+ '; font-weight: bold; }
+  .route-group[open] > summary::before { content: '− '; }
+  .route-detail { color: #8b93a7; font-size: 12px; margin-top: 2px; overflow-wrap: anywhere; }
+  .route-node { border-top: 1px solid #262d3a; padding: 10px 0; display: flex; align-items: flex-start; gap: 9px; }
+  .route-node input { margin: 4px 0 0; }
 </style>
 </head>
 <body>
@@ -144,6 +151,8 @@
   <div class="meta" id="meta">загрузка…</div>
   <div id="err"></div>
 
+  <h2>Выходы для сервисов</h2>
+  <div id="route-control">Загрузка…</div>
   <h2>Новый пользователь</h2>
   <div class="gen">
     <input id="name" placeholder="Имя (как в подписи)" maxlength="24" autocomplete="off">
@@ -167,6 +176,18 @@
 </div>
 
 <script>
+(async function routeControl(){
+  const root=document.getElementById('route-control'); let state;
+  const text=(tag,s,cls)=>{const e=document.createElement(tag);e.textContent=s;if(cls)e.className=cls;return e};
+  const api=async(path,body)=>{const r=await fetch('api/'+path,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{cache:'no-store'}); const d=await r.json();if(!r.ok||!d.ok)throw Error(d.error||'Ошибка');return d};
+  const accept=d=>{if(state&&d.epoch===state.epoch&&d.seq!=null&&state.seq!=null&&d.seq<state.seq)return;state=d;render()};
+  const render=()=>{root.replaceChildren();for(const [kind,title] of [['gemini','Gemini'],['ru','Российские сервисы']]){
+    const box=text('details','');box.open=!!window.routeOpen?.[kind];box.ontoggle=()=>{window.routeOpen=window.routeOpen||{};window.routeOpen[kind]=box.open};box.style.cssText='border:1px solid #262d3a;border-radius:8px;padding:12px;margin-bottom:12px';const head=text('summary','');head.append(text('b',title));box.append(head);if(state.probe_errors?.[kind])box.append(text('div',state.probe_errors[kind],'route-detail'));
+    const running=(state.probing||[]).includes(kind),activeScope=state.probing_scope?.[kind]||'all',allRunning=running&&activeScope==='all';const check=text('button',allRunning?(state.stopping?'Останавливается…':'Остановить проверку'):'Проверить доступность','copy');check.disabled=!!state.stopping||((state.probing||[]).length>0&&!allRunning);check.style.margin='10px 0';box.append(check);const list=text('div','');const selected=new Set(state.policy[kind]);
+    for(const [source,label] of [['свой','Наши ручные'],['подписка','Подписочные']]){const group=text('details','','route-group');const groupKey=kind+':'+source;group.open=!!window.routeGroupOpen?.[groupKey];group.ontoggle=()=>{window.routeGroupOpen=window.routeGroupOpen||{};window.routeGroupOpen[groupKey]=group.open};const groupScope=source==='свой'?'own':'subscription',groupRunning=running&&activeScope===groupScope;const groupHead=text('summary',label);const groupCheck=text('button',groupRunning?(state.stopping?'Останавливается…':'Остановить'):'Проверить','copy');groupCheck.type='button';groupCheck.style.cssText='float:right;margin-top:-4px';groupCheck.disabled=!!state.stopping||((state.probing||[]).length>0&&!groupRunning);groupCheck.onclick=async(e)=>{e.preventDefault();e.stopPropagation();groupCheck.disabled=true;try{accept(await api('routes/probe',{scenario:kind,scope:groupScope}))}catch(err){groupCheck.disabled=false;alert(err.message)}};groupHead.append(groupCheck);group.append(groupHead);const rank=node=>node.results[kind]?.status==='ok'?0:node.results[kind]?.status==='bad'?1:2;const items=state.nodes.filter(node=>node.source===source).sort((a,b)=>rank(a)-rank(b));for(const node of items){const r=node.results[kind],id=node.ids?.[kind]||node.id;const row=text('div','','route-node');if(r?.status==='bad'){const cross=text('span','×');cross.style.color='#ff9b9b';row.append(cross)}else{if(r?.status==='ok'){const tick=text('span','✓');tick.style.color='#65cc8a';row.append(tick)}const inp=document.createElement('input');inp.type='checkbox';inp.disabled=!!(state.probing||[]).length;inp.value=id;inp.checked=selected.has(id);inp.setAttribute('aria-label',node.name);row.append(inp)}const details=text('div','');details.append(text('div',node.name+' · '+node.source));let info=r?(r.status==='ok'?'Проверен':'Недоступен'):'Не проверен';if(r?.region)info+=' · регион Google: '+r.region;if(r?.latency_ms!=null)info+=' · отклик '+r.latency_ms+' мс';if(r?.egress_ip)info+=' · '+r.egress_ip;details.append(text('div',info,'route-detail'));if(r?.sites)details.append(text('div',Object.entries(r.sites).map(([n,v])=>n+': '+(v.http??'000')).join(' · '),'route-detail'));row.append(details);group.append(row)}list.append(group)}box.append(list);
+    const save=text('button','Применить','copy');save.disabled=!!(state.probing||[]).length;save.style.marginTop='8px';box.append(save);const msg=text('div','','meta');box.append(msg);check.onclick=async()=>{check.disabled=true;msg.textContent=running?'Останавливается…':'Проверка…';try{accept(await api('routes/probe',{scenario:kind}))}catch(e){msg.textContent=e.message;check.disabled=false}};save.onclick=async()=>{const tags=[...list.querySelectorAll('input:checked')].map(e=>e.value);if(!tags.length){msg.textContent='Выберите хотя бы один выход';return}save.disabled=true;msg.textContent='Применение…';try{accept(await api('routes/apply',{policy:{...state.policy,[kind]:tags}}))}catch(e){msg.textContent=e.message;save.disabled=false}};root.append(box)}};
+  try{accept(await api('routes'));let busy=false;setInterval(async()=>{if(busy||!(state.probing||[]).length)return;busy=true;try{accept(await api('routes'))}catch(e){root.dataset.pollError='Ошибка связи; повторяем'}finally{busy=false}},3000)}catch(e){root.textContent='Маршруты недоступны: '+e.message}
+})();
 const fmt = (mb) => {
   if (!mb) return "—";
   if (mb < 1) return Math.round(mb * 1024) + " KB";

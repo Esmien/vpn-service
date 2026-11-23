@@ -159,6 +159,9 @@ def main() -> int:
         lock = open("/var/lock/vpn-config.lock", "w")
         fcntl.flock(lock, fcntl.LOCK_EX)
         try:
+            if (BASE / "policy.json").exists():
+                log("маршрутами управляет админка; автоматическое переключение отключено")
+                return 0
             fresh = json.loads(CONFIG.read_text())
             rule = fresh["routing"]["rules"][google_rule_pos(fresh)]
             set_target(rule, desired)

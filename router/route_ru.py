@@ -24,6 +24,9 @@ RU_DOMAINS = [
 
 
 def main() -> int:
+    if (CFG.parent / 'policy.json').exists():
+        print('маршрутами управляет админка', file=sys.stderr)
+        return 1
     cfg = json.loads(CFG.read_text())
     tags = {o.get("tag") for o in cfg["outbounds"]}
     if RU_OUT not in tags:

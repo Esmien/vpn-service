@@ -17,3 +17,9 @@ users.md
 # hysteria: runtime config carries the auth/obfs secrets
 hysteria/config.yaml
 hysteria-users.json
+
+# Subscription links and transaction recovery contain credentials
+provider-subscriptions/
+hy2-bridges.json
+hy2-runtime/
+pending.json

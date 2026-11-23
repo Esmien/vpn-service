@@ -22,6 +22,7 @@ stopped accepting traffic.
     vpn-bluegreen.py probe [a|b]        # direct inbound probe of a color
 """
 import hashlib
+import os
 import json
 import socket
 import subprocess
@@ -139,6 +140,12 @@ def lint(cfg: dict) -> list[str]:
 
 def build(write: bool = True) -> int:
     cfg = load("a")
+    policy_path = BASE / "policy.json"
+    if policy_path.exists() and os.environ.get("VPN_POLICY_TRANSACTION") != "1":
+        from route_policy import render_policy
+        cfg = render_policy(cfg, json.loads(policy_path.read_text()))
+        # Existing file is individually bind-mounted: preserve its inode.
+        CONFIG.write_text(json.dumps(cfg, ensure_ascii=False, indent=2) + "\n")
     problems = lint(cfg)
     if problems:
         print("lint конфига не пройден:")

@@ -161,6 +161,11 @@ def main() -> int:
     lock = open("/var/lock/vpn-config.lock", "w")
     fcntl.flock(lock, fcntl.LOCK_EX)
     cfg = json.loads(CONFIG.read_text())
+    # Admin policy owns selectors. Do not rewrite even the draft.
+    if (BASE / "policy.json").exists():
+        log("маршрутами управляет админка; автоматическое изменение отключено")
+        lock.close()
+        return 0
     groups = {b["tag"]: b for b in cfg["routing"]["balancers"]}
     targets = {}
     for group in GROUPS:

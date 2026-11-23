@@ -10,6 +10,8 @@ import json
 import re
 import subprocess
 import threading
+import urllib.parse
+import route_control
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 BASE = "/root/vpn-router"
@@ -48,6 +50,11 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def do_GET(self):
+        if self.path.rstrip("/") == "/routes":
+            try:
+                return self._send(200, route_control.snapshot())
+            except Exception:
+                return self._send(500, {"ok": False, "error": "маршруты недоступны"})
         if self.path.rstrip("/") in ("/users", ""):
             try:
                 return self._send(200, {"ok": True, "users": sorted(load_users())})
@@ -57,14 +64,36 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         route = self.path.rstrip("/")
-        if route not in ("/new", "/del", "/reissue", "/refresh"):
+        if route not in ("/new", "/del", "/reissue", "/refresh", "/routes/probe", "/routes/apply"):
             return self._send(404, {"ok": False, "error": "not found"})
         try:
             length = int(self.headers.get("Content-Length") or 0)
+            if length < 0 or length > 32768:
+                return self._send(413, {"ok": False, "error": "запрос слишком велик"})
             raw = self.rfile.read(length) or b"{}"
             data = json.loads(raw)
         except Exception:
             return self._send(400, {"ok": False, "error": "bad request"})
+
+        if route in ("/routes/probe", "/routes/apply"):
+            if self.headers.get_content_type() != "application/json":
+                return self._send(415, {"ok": False, "error": "нужен JSON"})
+            origin = self.headers.get("Origin")
+            if origin:
+                parsed = urllib.parse.urlsplit(origin)
+                if parsed.scheme != 'https' or parsed.hostname != self.headers.get('Host', '').split(':')[0]:
+                    return self._send(403, {"ok": False, "error": "неверный источник"})
+            try:
+                if route.endswith("probe"):
+                    result = route_control.probe(data.get("scenario"), data.get("scope", "all"))
+                else:
+                    with LOCK:
+                        result = route_control.apply_selection(data.get("policy"))
+                return self._send(200, result)
+            except (ValueError, TypeError):
+                return self._send(400, {"ok": False, "error": "неверный выбор"})
+            except Exception:
+                return self._send(500, {"ok": False, "error": "операция не выполнена; проверьте сервер"})
 
         if route == "/refresh":
             try:
@@ -138,4 +167,13 @@ class Handler(BaseHTTPRequestHandler):
 
 
 if __name__ == "__main__":
+    pending = route_control.BASE / 'pending.json'
+    if pending.exists():
+        saved_policy = json.loads(pending.read_text()).get('old_policy')
+        if saved_policy:
+            route_control.ensure_bridges(json.loads(saved_policy))
+    else:
+        route_control.ensure_bridges(route_control.current_policy(route_control.load_config()))
+    route_control.recover(route_control.BASE, route_control.apply_config, route_control.LOCK)
+    route_control.start_bridge_supervisor()
     ThreadingHTTPServer((HOST, PORT), Handler).serve_forever()
