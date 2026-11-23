@@ -435,6 +435,14 @@
    },
    {
     "type": "field",
+    "domain": [
+     "domain:esmien.ru",
+     "domain:esmien.com"
+    ],
+    "outboundTag": "direct"
+   },
+   {
+    "type": "field",
     "protocol": [
      "bittorrent"
     ],
@@ -448,21 +456,6 @@
    },
    {
     "type": "field",
-    "inboundTag": [
-     "in-test"
-    ],
-    "outboundTag": "nl"
-   },
-   {
-    "type": "field",
-    "domain": [
-     "domain:stats.esmien.com",
-     "full:llm.esmien.ru"
-    ],
-    "outboundTag": "direct"
-   },
-   {
-    "type": "field",
     "domain": [
      "domain:googlevideo.com",
      "domain:ytimg.com",
@@ -472,21 +465,6 @@
      "domain:youtube.com"
     ],
     "outboundTag": "direct"
-   },
-   {
-    "type": "field",
-    "inboundTag": [
-     "in-france"
-    ],
-    "domain": [
-     "domain:google.com",
-     "domain:googleapis.com",
-     "domain:gstatic.com",
-     "domain:googleusercontent.com",
-     "domain:withgoogle.com",
-     "domain:google.dev"
-    ],
-    "balancerTag": "bal-google"
    },
    {
     "type": "field",
@@ -521,6 +499,28 @@
    },
    {
     "type": "field",
+    "inboundTag": [
+     "in-test"
+    ],
+    "outboundTag": "nl"
+   },
+   {
+    "type": "field",
+    "inboundTag": [
+     "in-france"
+    ],
+    "domain": [
+     "domain:google.com",
+     "domain:googleapis.com",
+     "domain:gstatic.com",
+     "domain:googleusercontent.com",
+     "domain:withgoogle.com",
+     "domain:google.dev"
+    ],
+    "balancerTag": "bal-google"
+   },
+   {
+    "type": "field",
     "network": "tcp,udp",
     "outboundTag": "direct"
    }
@@ -539,22 +539,18 @@
    {
     "tag": "bal-ru",
     "selector": [
-     "ru1",
-     "p15",
-     "p17"
+     "ru1"
     ],
     "strategy": {
      "type": "leastPing"
     },
-    "fallbackTag": "direct"
+    "fallbackTag": "p15"
    }
   ]
  },
  "observatory": {
   "subjectSelector": [
    "fr",
-   "p15",
-   "p17",
    "ru1"
   ],
   "probeUrl": "https://cp.cloudflare.com/generate_204",
