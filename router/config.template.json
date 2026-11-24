@@ -369,7 +369,6 @@
    "tag": "direct",
    "protocol": "freedom",
    "settings": {},
-   "sendThrough": "85.92.158.238",
    "streamSettings": {
     "sockopt": {
      "domainStrategy": "UseIPv4"
@@ -383,7 +382,6 @@
   {
    "tag": "nl",
    "protocol": "freedom",
-   "sendThrough": "85.92.158.226",
    "settings": {},
    "streamSettings": {
     "sockopt": {
@@ -419,8 +417,7 @@
      "shortId": "bbebe14aa312a5e3",
      "spiderX": "/"
     }
-   },
-   "sendThrough": "85.92.158.238"
+   }
   }
  ],
  "routing": {

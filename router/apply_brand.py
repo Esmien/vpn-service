@@ -207,6 +207,10 @@ def write_stream_map() -> None:
         'map "$server_addr:$ssl_preread_server_name" $mtproto_backend {\n'
         '    default 127.0.0.1:9443;\n'
         f'    "{edge}:{HOST}" {VPN_443_BACKEND};\n'
+        # панели на этом же IP (LLM, мониторинг, статистика) — в общий 9443-вход,
+        # иначе их SNI попадёт под reject-регексп ниже
+        + "".join(f'    "{edge}:{h}" 127.0.0.1:9443;\n'
+                  for h in ("llm.esmien.ru", "mon.esmien.ru", "stats.esmien.com", "ai.esmien.ru")) +
         f'    ~^{edge.replace(".", "[.]")}: 127.0.0.1:1;\n'
         f'    ~^{gate.replace(".", "[.]")}: 127.0.0.1:1;\n'
         '}\n'

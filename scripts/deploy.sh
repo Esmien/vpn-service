@@ -34,6 +34,8 @@ log "каталоги и скрипты"
 mkdir -p "$ROUTER" "$WEB" /var/www/html
 install -m 755 "$ASSETS"/router/*.py "$ROUTER"/
 install -m 755 "$ASSETS"/scripts/vpn-cfg /usr/local/bin/vpn-cfg
+# http-level maps/log formats referenced by the vhosts apply_brand.py generates
+install -m 644 "$ASSETS"/nginx/00-esmien-sub-map.conf "$ASSETS"/nginx/00-vpn-logformat.conf /etc/nginx/conf.d/
 [ -f "$ROUTER/brand.json" ] || install -m 644 "$ASSETS"/router/brand.json "$ROUTER"/brand.json
 mkdir -p /root/mtproto-faketls
 [ -f "$UUID_FILE" ] || openssl rand -hex 16 > "$UUID_FILE"
@@ -59,6 +61,9 @@ text = open(src).read().replace("<VLESS_UUID>", uid)
 cfg = json.loads(text)
 # внешние выходы подключаются позже через import_sub.py — пока без них
 cfg["outbounds"] = [o for o in cfg["outbounds"] if o["tag"] in ("direct", "blocked")]
+# sendThrough привязывал бы свободу к IP прежнего хоста — на новом его нет
+for o in cfg["outbounds"]:
+    o.pop("sendThrough", None)
 json.dump(cfg, open(dst, "w"), ensure_ascii=False, indent=2)
 print("config.json создан:", len(cfg["inbounds"]), "inbounds")
 PY
@@ -86,6 +91,11 @@ certbot "${CERTBOT_ARGS[@]}" || {
 [ -f "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" ] || { echo "нет сертификата, дальше идти нельзя"; exit 1; }
 
 log "nginx-входы"
+# certbot dns-01 runs do not drop the nginx TLS snippets; take them from the packages
+[ -f /etc/letsencrypt/options-ssl-nginx.conf ] || \
+  install -m 644 /usr/lib/python3/dist-packages/certbot_nginx/_internal/tls_configs/options-ssl-nginx.conf /etc/letsencrypt/
+[ -f /etc/letsencrypt/ssl-dhparams.pem ] || \
+  install -m 644 /usr/lib/python3/dist-packages/certbot/ssl-dhparams.pem /etc/letsencrypt/
 python3 "$ROUTER/apply_brand.py"
 nginx -t && systemctl reload nginx
 

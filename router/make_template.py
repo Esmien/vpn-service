@@ -22,7 +22,7 @@ def mask(obj):
                     "<PASSWORD>" if k == "password" else
                     "<RELAY_PASSWORD>" if k == "privateKey" else
                     ["<REALITY_SHORT_ID>"] if k == "shortIds" else mask(v))
-                for k, v in obj.items()}
+                for k, v in obj.items() if k != "sendThrough"}
     if isinstance(obj, list):
         return [mask(x) for x in obj]
     return obj
