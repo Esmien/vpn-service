@@ -32,6 +32,11 @@ CLI и панелью ссылки ведут на `https://share.esmien.com` (4
 `router/admin/subgen_api.py`; установщик кладёт его в прежний
 `/root/vpn-router/subgen_api.py`, поэтому `vpn-subgen.service` не меняется.
 
+Новая админка подписок и маршрутов живёт в этой ветке: фронт `web/admin_panel/`,
+бэк `router/admin/`, план и текущее состояние работ — `docs/vpn-admin-runbook.md`,
+запуск стенда и тесты — `router/admin/README.md`. Стенд работает на отдельной
+SQLite и не применяет изменения к Xray; боевая панель и её API не затронуты.
+
 Домашний провайдер режет 443 и fake-TLS/MTProto, но пропускает настоящий TLS на
 нестандартных портах. Поэтому вход — VLESS+WS за nginx с сертификатом Let's Encrypt,
 а внешние выходы подключаются как outbound'ы Xray.
